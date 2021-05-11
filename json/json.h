@@ -10,29 +10,44 @@ public:
 	JSONException() : std::exception() {}
 };
 
-enum Primitives { STRING, NUMBER, ARRAY, OBJECT };
+enum class Primitives { STRING, NUMBER, ARRAY, OBJECT };
 
 class JSON {
 private:
+	unsigned index;
 	std::string self;
 	Primitives type;
 	bool defined = true;
-public:
+
+	std::string arrayAsString() const;
+	std::string objectAsString() const;
+
+	void parse(const std::string& str);
+	void parseJSON();
+	void parseArray();
+	JSON readElement();
+	JSON readString();
+	JSON readNumber();
+	JSON readJSONOrArray();
+	std::string parseJSONOrArray();
+	void parseSpaces();
 	JSON getInactive(std::string propertyName);
 	std::string propertyName;
-	std::vector<JSON> children;
 	std::unordered_map<std::string, unsigned> indices;
+public:
+	std::vector<JSON> children;
 	void setType(Primitives type);
 	void setSelf(std::string str);
 
 	JSON();
-	JSON(std::string json);
-	JSON(std::string json, std::string propertyName);
+	JSON(std::string&& json);
+	JSON(const std::string& json);
+	JSON(const std::string& json, std::string propertyName);
+	JSON(JSON&& other);
+	JSON(const JSON& other) = default;
 
-	void operator=(JSON other);
-	void operator=(std::string other);
-	void operator=(std::vector<JSON> v);
-	void operator=(std::vector<std::string> v);
+	void operator=(const JSON& other);
+	void operator=(const std::string& other);
 
 	JSON& operator[](std::string propertyName);
 	JSON& operator[](int x);
@@ -40,13 +55,11 @@ public:
 	const JSON& get(std::string propertyName) const;
 	const JSON& get(int x) const;
 
-	void push(JSON json);
+	void push(JSON&& json);
 	void push(std::string str);
 
 	bool asBool() const;
 	int asInt() const;
 	double asDouble() const;
 	std::string asString() const;
-	std::string arrayAsString() const;
-	std::string objectAsString() const;
 };
