@@ -19,8 +19,8 @@ private:
 	Primitives type;
 	bool defined = true;
 
-	std::string arrayAsString() const;
-	std::string objectAsString() const;
+	std::string arrayAsString(unsigned tabulation, int indent) const;
+	std::string objectAsString(unsigned tabulation, int indent) const;
 
 	void parse(const std::string& str);
 	void parseJSON();
@@ -34,10 +34,13 @@ private:
 	JSON getInactive(std::string propertyName);
 	std::string propertyName;
 	std::unordered_map<std::string, unsigned> indices;
-public:
-	std::vector<JSON> children;
 	void setType(Primitives type);
 	void setSelf(std::string str);
+	void assertType(Primitives type) const;
+	bool isNumber() const;
+	std::string asString(unsigned tabulation, int indent) const;
+	std::vector<JSON> children;
+public:
 
 	JSON();
 	JSON(std::string&& json);
@@ -45,21 +48,27 @@ public:
 	JSON(const std::string& json, std::string propertyName);
 	JSON(JSON&& other);
 	JSON(const JSON& other) = default;
+	void operator=(const JSON & other);
+	void operator=(const std::string & other);
 
-	void operator=(const JSON& other);
-	void operator=(const std::string& other);
+	const std::string& getName() const;
 
-	JSON& operator[](std::string propertyName);
+	const bool has(const std::string& propertyName) const;
+	const JSON& get(const std::string& propertyName) const;
+	JSON& operator[](const std::string& propertyName);
+	const JSON& get(int x) const;
 	JSON& operator[](int x);
 
-	const JSON& get(std::string propertyName) const;
-	const JSON& get(int x) const;
+	unsigned size();
+	const std::vector<JSON>& getChildren();
 
 	void push(JSON&& json);
+	void push(const JSON& json);
 	void push(std::string str);
 
 	bool asBool() const;
 	int asInt() const;
 	double asDouble() const;
 	std::string asString() const;
+	std::string asString(unsigned tabulation) const;
 };

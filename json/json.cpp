@@ -1,4 +1,5 @@
 #include "json.h"
+#include <sstream>
 
 JSON::JSON(const std::string& json) {
 	self = json;
@@ -44,51 +45,59 @@ JSON JSON::getInactive(std::string propertyName) {
 	return std::move(json);
 }
 
-JSON& JSON::operator[](std::string propertyName) {
-	if (!defined)
-		throw JSONException("Attempting to access inactive property");
-	if (type != Primitives::OBJECT)
-		throw JSONException("this JSON is either an array, string or number");
-	try {
-		auto index = indices.at(propertyName);
-		return children[index];
-	}
-	catch (...) {
+JSON& JSON::operator[](const std::string& propertyName) {
+	assertType(Primitives::OBJECT);
+	if (!has(propertyName)) {
 		children.emplace_back(std::move(getInactive(propertyName)));
 		indices.insert(make_pair(propertyName, children.size() - 1));
-		return children[indices.at(propertyName)];
 	}
+	JSON& child = children[indices.at(propertyName)];
+	child.propertyName = propertyName;
+	return child;
 };
 
-const JSON& JSON::get(std::string propertyName) const {
-	if (!defined)
-		throw JSONException("Attempting to access inactive property");
-	if (type != Primitives::OBJECT)
-		throw JSONException("this JSON is either an array, string or number");
+const JSON& JSON::get(const std::string& propertyName) const {
+	assertType(Primitives::OBJECT);
+	if (!has(propertyName))
+		throw JSONException("Missing property, can't provide const reference");
 	auto index = indices.at(propertyName);
 	return children[index];
 }
 
 JSON& JSON::operator[](int x) {
-	if (!defined)
-		throw JSONException("Attempting to access inactive property");
-	if (type != Primitives::ARRAY)
-		throw JSONException("this JSON is not an array");
+	assertType(Primitives::ARRAY);
 	return children[x];
 }
 
+unsigned JSON::size() {
+	return children.size();
+}
+
+const std::vector<JSON>& JSON::getChildren() {
+	return children;
+}
+
+const std::string& JSON::getName() const {
+	return propertyName;
+}
+
+const bool JSON::has(const std::string& propertyName) const {
+	return indices.find(propertyName) != indices.end();
+}
+
 const JSON& JSON::get(int x) const {
-	if (!defined)
-		throw JSONException("Attempting to access inactive property");
-	if (type != Primitives::ARRAY)
-		throw JSONException("this JSON is not an array");
+	assertType(Primitives::ARRAY);
 	return children[x];
 }
 
 void JSON::push(JSON&& json) {
-	if (type != Primitives::ARRAY)
-		throw JSONException("this JSON object is not an array");
+	assertType(Primitives::ARRAY);
 	this->children.emplace_back(json);
+}
+
+void JSON::push(const JSON& json) {
+	assertType(Primitives::ARRAY);
+	this->children.push_back(json);
 }
 
 void JSON::push(std::string str) {
@@ -96,63 +105,98 @@ void JSON::push(std::string str) {
 }
 
 std::string JSON::asString() const {
-	switch (type) {
-	case Primitives::ARRAY:
-		return arrayAsString();
-	case Primitives::OBJECT:
-		return objectAsString();
-	case Primitives::STRING:
-	case Primitives::NUMBER:
-	default:
-		return self;
-	}
+	return asString(0);
 }
 
-std::string JSON::arrayAsString() const {
-	std::string out = "[";
+std::string JSON::asString(unsigned tabulation) const {
+	return asString(tabulation, 0);
+}
+
+std::string JSON::arrayAsString(unsigned tabulation, int indent) const {
+	bool newLines = tabulation > 0;
+	std::stringstream out;
+	out << "[";
+	if (children.size()) {
+		if (newLines)
+			out << "\n";
+		for (int i = 0; i < tabulation * indent; ++i)
+			out << " ";
+	}
 	bool hasChildren = false;
 	for (const auto& json : children) {
 		if (!json.defined)
 			continue;
+		if (hasChildren) {
+			if (newLines) {
+				out << ",\n";
+				for (int i = 0; i < tabulation * indent; ++i)
+					out << " ";
+			}
+			else
+				out << ", ";
+		}
 		hasChildren = true;
 		switch (json.type) {
-		case Primitives::STRING:
-			out += '"' + json.asString() + '"';
-			break;
-		default:
-			out += json.asString();
-			break;
+			case Primitives::STRING:
+				out << '"' + json.asString(tabulation, indent) + '"';
+				break;
+			default:
+				out << json.asString(tabulation, indent);
+				break;
 		}
-		out += ", ";
 	}
-	if (hasChildren)
-		out.erase(out.length() - 2, out.length());
-	out += ']';
-	return out;
+	if (hasChildren) {
+		if (newLines)
+			out << "\n";
+		for (int i = 0; i < tabulation * (indent - 1); ++i)
+			out << " ";
+	}
+	out << "]";
+	return out.str();
 }
 
-std::string JSON::objectAsString() const {
-	std::string out = "{";
+std::string JSON::objectAsString(unsigned tabulation, int indent) const {
+	bool newLines = tabulation > 0;
+	std::stringstream out;
+	out << "{";
+	if (children.size()) {
+		if (newLines)
+			out << "\n";
+		for (int i = 0; i < tabulation * indent; ++i)
+			out << " ";
+	}
 	bool hasChildren = false;
 	for (const auto& pair : indices) {
 		const JSON& json = children[pair.second];
 		if (!json.defined)
 			continue;
+		if (hasChildren) {
+			if (newLines) {
+				out << ",\n";
+				for (int i = 0; i < tabulation * indent; ++i)
+					out << " ";
+			}
+			else
+				out << ", ";
+		}
 		hasChildren = true;
 		switch (json.type) {
 		case Primitives::STRING:
-			out += '"' + pair.first + "\" : " + '"' + json.asString() + '"';
+			out << '"' + pair.first + "\": " + '"' + json.asString(tabulation, indent) + '"';
 			break;
 		default:
-			out += '"' + pair.first + "\" : " + json.asString();
+			out << '"' + pair.first + "\": " + json.asString(tabulation, indent);
 			break;
 		}
-		out += ", ";
 	}
-	if (hasChildren)
-		out.erase(out.length() - 2, out.length());
-	out += '}';
-	return out;
+	if (hasChildren) {
+		if (newLines)
+			out << "\n";
+		for (int i = 0; i < tabulation * (indent - 1); ++i)
+			out << " ";
+	}
+	out << "}";
+	return out.str();
 }
 
 bool JSON::asBool() const {
@@ -183,6 +227,34 @@ void JSON::setSelf(std::string str) {
 	self = str;
 }
 
+void JSON::assertType(Primitives type) const {
+	if (!defined)
+		throw JSONException("Attempting to access inactive property");
+	if (this->type != type)
+		throw JSONException("this JSON is not of the right type for this operation");
+}
+
+bool JSON::isNumber() const {
+	std::string arr = "0123456789.";
+	for (const auto& s : self)
+		if (arr.find(s) == std::string::npos)
+			return false;
+	return true;
+}
+
+std::string JSON::asString(unsigned tabulation, int indent) const {
+	switch (type) {
+		case Primitives::ARRAY:
+			return arrayAsString(tabulation, indent + 1);
+		case Primitives::OBJECT:
+			return objectAsString(tabulation, indent + 1);
+		case Primitives::STRING:
+		case Primitives::NUMBER:
+		default:
+			return self;
+	}
+}
+
 void JSON::parse(const std::string& str) {
 	index = 1;
 	switch (self[0]) {
@@ -196,6 +268,8 @@ void JSON::parse(const std::string& str) {
 			break;
 		case '\'':
 		case '"':
+			if (self.length() == 1)
+				throw JSONException("Bad string");
 			self.erase(0, 1);
 			if (self[self.length() - 1] == '\'' || self[self.length() - 1] == '"')
 				self.erase(self.length() - 1);
@@ -203,7 +277,10 @@ void JSON::parse(const std::string& str) {
 			setType(Primitives::STRING);
 			break;
 		default:
-			setType(Primitives::NUMBER);
+			if (isNumber())
+				setType(Primitives::NUMBER);
+			else
+				setType(Primitives::STRING);
 			break;
 	}
 }
@@ -212,7 +289,7 @@ void JSON::parseJSON() {
 	parseSpaces();
 	while (index < self.length() - 1) {
 		bool inString = false;
-		std::string propertyName = "";
+		std::stringstream propertyName;
 		while (index < self.length()) {
 			char c = self[index];
 			if (c == '\'' || c == '"')
@@ -221,35 +298,36 @@ void JSON::parseJSON() {
 				else
 					inString = true;
 			else if (inString)
-				propertyName += c;
+				propertyName << c;
 			++index;
 		}
-		if (!inString || propertyName.length() == 0)
+		std::string pn = propertyName.str();
+		if (!inString || pn.length() == 0)
 			throw JSONException(("No property name in json while parsing " + self).c_str());
 		inString = false;
 		++index;
 		bool found = false;
 		parseSpaces();
 		if (self[index] != ':')
-			throw JSONException(("could not find ':' associated with \"" + propertyName + "\" in " + self).c_str());
+			throw JSONException(("could not find ':' associated with \"" + pn + "\" in " + self).c_str());
 		++index;
 		parseSpaces();
 		found = false;
 		char next = self[index];
-		std::string buffer = "";
+		std::stringstream buffer;
 		std::vector<char> stack;
 		switch (next) {
 		case '[':
 		case '{':
-			buffer = parseJSONOrArray();
+			buffer << parseJSONOrArray();
 			break;
 		case '\'':
 		case '"':
-			buffer = "'";
+			buffer << "'";
 			++index;
 			while (index < self.length()) {
 				char c = self[index];
-				buffer += c;
+				buffer << c;
 				if (c == '\'' || c == '"')
 					break;
 				++index;
@@ -260,17 +338,17 @@ void JSON::parseJSON() {
 			while (index < self.length()) {
 				char c = self[index];
 				if (c != ' ' && c != ',' && c != '}')
-					buffer += c;
+					buffer << c;
 				else
 					break;
 				++index;
 			}
 			break;
 		}
-		if (indices.find(propertyName) != indices.end())
-			throw JSONException("Duplicated property name " + propertyName);
-		children.emplace_back(buffer, propertyName);
-		indices.insert(make_pair(propertyName, children.size() - 1));
+		if (indices.find(pn) != indices.end())
+			throw JSONException("Duplicated property name " + pn);
+		children.emplace_back(buffer.str(), pn);
+		indices.insert(make_pair(pn, children.size() - 1));
 		parseSpaces();
 		if (self[index] == '}')
 			break;
@@ -278,7 +356,7 @@ void JSON::parseJSON() {
 			continue;
 		else {
 			std::cout << self;
-			throw JSONException("no stop character found after property: " + propertyName + " in " + self);
+			throw JSONException("no stop character found after property: " + pn + " in " + self);
 		}
 	}
 }
@@ -307,33 +385,40 @@ JSON JSON::readElement() {
 }
 
 JSON JSON::readString() {
-	std::string buffer = "\"";
+	std::stringstream buffer;
+	buffer << "\"";
 	++index;
 	while (index < self.length()) {
 		char c = self[index];
 		if (c == '\'')
 			c = self[index] = '"';
-		buffer += c;
+		buffer << c;
 		++index;
 		if (c == '"')
 			break;
 	}
-	return JSON(buffer);
+	return JSON(buffer.str());
 }
 
 JSON JSON::readNumber() {
-	std::string buffer = "";
+	std::stringstream buffer;
+	buffer << "";
+	bool inNum = true;
 	while (index < self.length()) {
 		char c = self[index];
 		switch (c) {
-		case ',':
-		case ' ':
-			return JSON(buffer);
+			case ',':
+			case ' ':
+			case ']':
+			case '}':
+				inNum = false;
 		}
-		buffer += c;
+		if (!inNum)
+			break;
+		buffer << c;
 		++index;
 	}
-	return JSON(buffer);
+	return JSON(buffer.str());
 }
 
 JSON JSON::readJSONOrArray() {
@@ -341,37 +426,37 @@ JSON JSON::readJSONOrArray() {
 }
 
 std::string JSON::parseJSONOrArray() {
-	std::string buffer = "";
+	std::stringstream buffer;
 	std::vector<char> stack;
 	while (index <= self.length()) {
 		char c = self[index];
 		++index;
-		buffer += c;
+		buffer << c;
 		switch (c) {
-		case '{':
-		case '[':
-			stack.push_back(c);
-			break;
-		case '}':
-			if (stack.back() == '{')
-				stack.pop_back();
-			break;
-		case ']':
-			if (stack.back() == '[')
-				stack.pop_back();
-			break;
-		case '\'':
-		case '"':
-			if (stack.back() == '\'' || stack.back() == '"')
-				stack.pop_back();
-			else
+			case '{':
+			case '[':
 				stack.push_back(c);
-			break;
+				break;
+			case '}':
+				if (stack.back() == '{')
+					stack.pop_back();
+				break;
+			case ']':
+				if (stack.back() == '[')
+					stack.pop_back();
+				break;
+			case '\'':
+			case '"':
+				if (stack.back() == '\'' || stack.back() == '"')
+					stack.pop_back();
+				else
+					stack.push_back(c);
+				break;
 		}
 		if (stack.size() == 0)
 			break;
 	}
-	return buffer;
+	return buffer.str();
 }
 
 void JSON::parseSpaces() {
