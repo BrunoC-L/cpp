@@ -73,7 +73,7 @@ unsigned JSON::size() {
 	return children.size();
 }
 
-const std::vector<JSON>& JSON::getChildren() {
+const std::vector<JSON>& JSON::getChildren() const {
 	return children;
 }
 

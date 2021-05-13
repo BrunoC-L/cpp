@@ -60,7 +60,7 @@ public:
 	JSON& operator[](int x);
 
 	unsigned size();
-	const std::vector<JSON>& getChildren();
+	const std::vector<JSON>& getChildren() const;
 
 	void push(JSON&& json);
 	void push(const JSON& json);
