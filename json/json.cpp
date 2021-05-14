@@ -69,7 +69,7 @@ JSON& JSON::operator[](int x) {
 	return children[x];
 }
 
-unsigned JSON::size() {
+unsigned JSON::size() const {
 	return children.size();
 }
 
@@ -85,7 +85,7 @@ const std::string& JSON::getName() const {
 	return propertyName;
 }
 
-const bool JSON::has(const std::string& propertyName) const {
+bool JSON::has(const std::string& propertyName) const {
 	return indices.find(propertyName) != indices.end();
 }
 

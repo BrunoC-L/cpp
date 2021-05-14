@@ -52,17 +52,16 @@ public:
 	void operator=(const JSON & other);
 	void operator=(const std::string & other);
 
-	const std::string& getName() const;
-
-	const bool has(const std::string& propertyName) const;
-	const JSON& get(const std::string& propertyName) const;
-	JSON& operator[](const std::string& propertyName);
-	const JSON& get(int x) const;
-	JSON& operator[](int x);
-
-	unsigned size();
+	unsigned size() const;
 	const std::vector<std::string>& getProperties() const;
 	const std::vector<JSON>& getChildren() const;
+	const std::string& getName() const;
+
+	bool has(const std::string& propertyName) const;
+	const JSON& get(const std::string& propertyName) const;
+	const JSON& get(int x) const;
+	JSON& operator[](const std::string& propertyName);
+	JSON& operator[](int x);
 
 	void push(JSON&& json);
 	void push(const JSON& json);
