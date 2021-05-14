@@ -43,12 +43,14 @@ void parseAndStringify() {
 		std::string s2 = JSON(s1).asString();
 		std::string s3 = replace(s1);
 		std::string s4 = JSON(s3).asString();
-
-		// keys are not ordered!
-			std::sort(s2.begin(), s2.end());
-			std::sort(s3.begin(), s3.end());
-			std::sort(s4.begin(), s4.end());
-
+		expect(s2 == s3 && s3 == s4);
+	}
+	{
+		// same test but different order, to check that order is indeed respected, unlike previous versions
+		std::string s1("{'occupation': 'runescape gold seller', 'name': 'star wars', 'bank accounts': {}, 'hobbies': ['erm'], 'what is that': [[[[]]]]}");
+		std::string s2 = JSON(s1).asString();
+		std::string s3 = replace(s1);
+		std::string s4 = JSON(s3).asString();
 		expect(s2 == s3 && s3 == s4);
 	}
 	{

@@ -73,6 +73,10 @@ unsigned JSON::size() {
 	return children.size();
 }
 
+const std::vector<std::string>& JSON::getProperties() const {
+	return properties;
+}
+
 const std::vector<JSON>& JSON::getChildren() const {
 	return children;
 }
@@ -166,8 +170,9 @@ std::string JSON::objectAsString(unsigned tabulation, int indent) const {
 			out << " ";
 	}
 	bool hasChildren = false;
-	for (const auto& pair : indices) {
-		const JSON& json = children[pair.second];
+	for (const auto& propertName : properties) {
+		auto index = indices.at(propertName);
+		const JSON& json = children[index];
 		if (!json.defined)
 			continue;
 		if (hasChildren) {
@@ -182,10 +187,10 @@ std::string JSON::objectAsString(unsigned tabulation, int indent) const {
 		hasChildren = true;
 		switch (json.type) {
 		case Primitives::STRING:
-			out << '"' + pair.first + "\": " + '"' + json.asString(tabulation, indent) + '"';
+			out << '"' + propertName + "\": " + '"' + json.asString(tabulation, indent) + '"';
 			break;
 		default:
-			out << '"' + pair.first + "\": " + json.asString(tabulation, indent);
+			out << '"' + propertName + "\": " + json.asString(tabulation, indent);
 			break;
 		}
 	}
@@ -348,6 +353,7 @@ void JSON::parseJSON() {
 		if (indices.find(pn) != indices.end())
 			throw JSONException("Duplicated property name " + pn);
 		children.emplace_back(buffer.str(), pn);
+		properties.push_back(pn);
 		indices.insert(make_pair(pn, children.size() - 1));
 		parseSpaces();
 		if (self[index] == '}')

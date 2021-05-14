@@ -33,6 +33,7 @@ private:
 	void parseSpaces();
 	JSON getInactive(std::string propertyName);
 	std::string propertyName;
+	std::vector<std::string> properties;
 	std::unordered_map<std::string, unsigned> indices;
 	void setType(Primitives type);
 	void setSelf(std::string str);
@@ -60,6 +61,7 @@ public:
 	JSON& operator[](int x);
 
 	unsigned size();
+	const std::vector<std::string>& getProperties() const;
 	const std::vector<JSON>& getChildren() const;
 
 	void push(JSON&& json);
