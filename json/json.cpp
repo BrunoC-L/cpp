@@ -50,6 +50,7 @@ JSON& JSON::operator[](const std::string& propertyName) {
 	if (!has(propertyName)) {
 		children.emplace_back(std::move(getInactive(propertyName)));
 		indices.insert(make_pair(propertyName, children.size() - 1));
+		properties.push_back(propertyName);
 	}
 	JSON& child = children[indices.at(propertyName)];
 	child.propertyName = propertyName;
