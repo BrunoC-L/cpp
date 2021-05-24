@@ -26,6 +26,7 @@ JSON::JSON(JSON&& other) {
 	std::swap(children, other.children);
 	std::swap(indices, other.indices);
 	std::swap(self, other.self);
+	std::swap(properties, other.properties);
 	type = other.type;
 	defined = other.defined;
 }
