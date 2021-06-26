@@ -4,6 +4,9 @@
 void parseAndStringify();
 void manipulations();
 
+int testCase = 0;
+auto expect = [&](bool b) { if (!b) std::cerr << "Test " << ++testCase << " Failed\n"; else std::cout << "Test " << ++testCase << " Passed\n"; };
+
 int main() {
 	std::cout << "--- parseAndStringify ---\n";
 	parseAndStringify();
@@ -22,35 +25,33 @@ std::string replace(const std::string& s) {
 }
 
 void parseAndStringify() {
-	int testCase = 0;
-	auto expect = [&](bool b) { if (!b) std::cerr << "Test " << ++testCase << " Failed\n"; else std::cout << "Test " << ++testCase << " Passed\n"; };
 	{
 		std::string s1("{}");
-		std::string s2 = JSON(s1).asString();
+		std::string s2 = JSON(s1).asString("", false);
 		std::string s3 = replace(s1);
-		std::string s4 = JSON(s3).asString();
+		std::string s4 = JSON(s3).asString("", false);
 		expect(s2 == s3 && s3 == s4);
 	}
 	{
 		std::string s1("{'name': [1]}");
-		std::string s2 = JSON(s1).asString();
+		std::string s2 = JSON(s1).asString("", false);
 		std::string s3 = replace(s1);
-		std::string s4 = JSON(s3).asString();
+		std::string s4 = JSON(s3).asString("", false);
 		expect(s2 == s3 && s3 == s4);
 	}
 	{
 		std::string s1("{'name': 'star wars', 'occupation': 'runescape gold seller', 'hobbies': ['erm'], 'bank accounts': {}, 'what is that': [[[[]]]]}");
-		std::string s2 = JSON(s1).asString();
+		std::string s2 = JSON(s1).asString("", false);
 		std::string s3 = replace(s1);
-		std::string s4 = JSON(s3).asString();
+		std::string s4 = JSON(s3).asString("", false);
 		expect(s2 == s3 && s3 == s4);
 	}
 	{
 		// same test but different order, to check that order is indeed respected, unlike previous versions
 		std::string s1("{'occupation': 'runescape gold seller', 'name': 'star wars', 'bank accounts': {}, 'hobbies': ['erm'], 'what is that': [[[[]]]]}");
-		std::string s2 = JSON(s1).asString();
+		std::string s2 = JSON(s1).asString("", false);
 		std::string s3 = replace(s1);
-		std::string s4 = JSON(s3).asString();
+		std::string s4 = JSON(s3).asString("", false);
 		expect(s2 == s3 && s3 == s4);
 	}
 	{
@@ -70,16 +71,20 @@ void parseAndStringify() {
 			"        ]\n"
 			"    ]\n"
 			"}");
-		std::string s2 = JSON(s1).asString(4);
-		std::string s3 = replace(s1);
-		std::string s4 = JSON(s3).asString(4);
+		std::string s2 = replace(s1);
+		std::string s3 = JSON(s1).asString("    ", false);
+		std::string s4 = JSON(s3).asString("    ", false);
 		expect(s2 == s3 && s3 == s4);
+	}
+	{
+		JSON escapeSequences("{'hello':'world!\\n'}");
+		expect(escapeSequences["hello"].asString("", false) == "world!\\n");
+		expect(escapeSequences["hello"].asString("", true)  == "world!\n");
 	}
 }
 
 void manipulations() {
-	int testCase = 0;
-	auto expect = [&](bool b) { if (!b) std::cerr << "Test " << ++testCase << " Failed\n"; else std::cout << "Test " << ++testCase << " Passed\n"; };
+	testCase = 0;
 	{
 		JSON json;
 		json["dog"] = "dog";
