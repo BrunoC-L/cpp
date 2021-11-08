@@ -77,9 +77,11 @@ void parseAndStringify() {
 		expect(s2 == s3 && s3 == s4);
 	}
 	{
-		JSON escapeSequences("{'hello':'world!\\n'}");
+		JSON escapeSequences("{'hello':'world!\\n', 'boom':'bop\\t\\n\\\\'}");
 		expect(escapeSequences["hello"].asString("", false) == "world!\\n");
 		expect(escapeSequences["hello"].asString("", true)  == "world!\n");
+		expect(escapeSequences["boom"].asString("", false) == "bop\\t\\n\\\\");
+		expect(escapeSequences["boom"].asString("", true) == "bop\t\n\\");
 	}
 }
 
