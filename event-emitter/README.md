@@ -6,5 +6,7 @@ This implementation offers typed event subscribers and emitters (not subscribing
 
 output
 > x: 1, y: 1, shift: true
+> 
 > x: 2, y: 2, shift: false
+> 
 > x: 2, y: 2, shift: false
