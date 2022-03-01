@@ -41,31 +41,47 @@ private:
 	void setSelf(std::string str);
 	void assertType(Primitives type) const;
 	bool isNumber() const;
+	JSON(const std::string& json, std::string propertyName);
+	const std::string& getName() const;
 public:
 
-	JSON();
+	// following the rule of 0
+	JSON(): JSON("{}") {}
+	JSON(const JSON&) = default;
+	JSON& operator=(const JSON&) = default;
+	JSON(JSON&&) = default;
+	JSON& operator=(JSON&&) = default;
+	~JSON() = default;
+
+	// other constructors
+
 	JSON(std::string&& json);
 	JSON(const std::string& json);
-	JSON(const std::string& json, std::string propertyName);
-	JSON(JSON&& other);
-	JSON(const JSON& other) = default;
-	void operator=(const JSON& other);
-	void operator=(const std::string& other);
+	JSON& operator=(const std::string& other);
 
-	unsigned size() const;
-	const std::vector<std::string>& getProperties() const;
-	const std::vector<JSON>& getChildren() const;
-	const std::string& getName() const;
+	// manipulations
+
+	void reserve(int size);
 
 	std::vector<std::string>::const_iterator find(const std::string& propertyName) const;
-	const JSON& get(const std::string& propertyName) const;
-	const JSON& get(int x) const;
+
+	const JSON& at(const std::string& propertyName) const;
+	const JSON& at(int x) const;
 	JSON& operator[](const std::string& propertyName);
 	JSON& operator[](int x);
 
 	void push(JSON&& json);
 	void push(const JSON& json);
-	void push(std::string str);
+	void push(const std::string& str);
+
+	// views
+
+	unsigned size() const;
+
+	const std::vector<std::string>& getProperties() const;
+	const std::vector<JSON>& getChildren() const;
+
+	// using "as" instead of "to" since its similar to a cast, it can fail
 
 	bool asBool() const;
 	int asInt() const;

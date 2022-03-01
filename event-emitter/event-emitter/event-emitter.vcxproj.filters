@@ -18,15 +18,9 @@
     <ClInclude Include="event.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="eventTypes.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="example.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="eventTypes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

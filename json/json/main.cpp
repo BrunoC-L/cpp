@@ -24,37 +24,29 @@ std::string replace(const std::string& s) {
 	return r;
 }
 
+void simpleReplaceTest(const std::string& s1) {
+	std::string s2 = JSON(s1).asString("", false);
+	std::string s3 = replace(s1);
+	std::string s4 = JSON(s3).asString("", false);
+	expect(s2 == s3 && s3 == s4);
+}
+
 void parseAndStringify() {
 	{
-		std::string s1("{}");
-		std::string s2 = JSON(s1).asString("", false);
-		std::string s3 = replace(s1);
-		std::string s4 = JSON(s3).asString("", false);
-		expect(s2 == s3 && s3 == s4);
+		simpleReplaceTest("{}");
 	}
 	{
-		std::string s1("{'name': [1]}");
-		std::string s2 = JSON(s1).asString("", false);
-		std::string s3 = replace(s1);
-		std::string s4 = JSON(s3).asString("", false);
-		expect(s2 == s3 && s3 == s4);
+		simpleReplaceTest("{'name': [1]}");
 	}
 	{
-		std::string s1("{'name': 'star wars', 'occupation': 'runescape gold seller', 'hobbies': ['erm'], 'bank accounts': {}, 'what is that': [[[[]]]]}");
-		std::string s2 = JSON(s1).asString("", false);
-		std::string s3 = replace(s1);
-		std::string s4 = JSON(s3).asString("", false);
-		expect(s2 == s3 && s3 == s4);
+		simpleReplaceTest("{'name': 'star wars', 'occupation': 'runescape gold seller', 'hobbies': ['erm'], 'bank accounts': {}, 'what is that': [[[[]]]]}");
 	}
 	{
 		// same test but different order, to check that order is indeed respected, unlike previous versions
-		std::string s1("{'occupation': 'runescape gold seller', 'name': 'star wars', 'bank accounts': {}, 'hobbies': ['erm'], 'what is that': [[[[]]]]}");
-		std::string s2 = JSON(s1).asString("", false);
-		std::string s3 = replace(s1);
-		std::string s4 = JSON(s3).asString("", false);
-		expect(s2 == s3 && s3 == s4);
+		simpleReplaceTest("{'occupation': 'runescape gold seller', 'name': 'star wars', 'bank accounts': {}, 'hobbies': ['erm'], 'what is that': [[[[]]]]}");
 	}
 	{
+		// testing with tabulations
 		std::string s1(
 			"{\n"
 			"    'name': 'star',\n"
@@ -97,7 +89,7 @@ void manipulations() {
 	{
 		JSON json;
 		json["dog"] = "dog";
-		expect(json["dog"].asString() == json.get("dog").asString());
+		expect(json["dog"].asString() == json.at("dog").asString());
 
 		json["dog"] = "";
 		expect(json["dog"].asString() == "");
@@ -110,7 +102,7 @@ void manipulations() {
 		json["numbers"] = "[]";
 		for (int i = 0; i < 100; ++i)
 			json["numbers"].push(std::to_string(i));
-		expect(json.size() == 1 && json["numbers"].size() == 100 && json["numbers"][67].asInt() == 67 && json["numbers"].get(33).asString() == "33");
+		expect(json.size() == 1 && json["numbers"].size() == 100 && json["numbers"][67].asInt() == 67 && json["numbers"].at(33).asString() == "33");
 	}
 	{
 		int K = 3, N = 6;
@@ -128,23 +120,23 @@ void manipulations() {
 		expect(json["numbers" + std::to_string(N - 1)].size() == std::pow(K, N - 1));
 	}
 	{
-		std::vector<JSON> jsons;
-		jsons.push_back(JSON());
-		jsons.push_back(JSON(""));
-		jsons.push_back(JSON("''"));
-		jsons.push_back(JSON("{}"));
-		jsons.push_back(JSON("[]"));
-		jsons.push_back(JSON("0"));
-		jsons.push_back(JSON("'0'"));
-		jsons.push_back(JSON("false"));
-		jsons.push_back(JSON("undefined"));
-		jsons.push_back(JSON("'undefined'"));
-		jsons.push_back(JSON("null"));
-		jsons.push_back(JSON("'null'"));
-		std::vector<bool> expectedFalse = {};
-		for (const auto& json : jsons)
-			expectedFalse.push_back(json.asBool());
-		expect(std::find(expectedFalse.begin(), expectedFalse.end(), true) == expectedFalse.end());
+		std::vector<JSON> falses;
+		falses.push_back(JSON());
+		falses.push_back(JSON(""));
+		falses.push_back(JSON("''"));
+		falses.push_back(JSON("{}"));
+		falses.push_back(JSON("[]"));
+		falses.push_back(JSON("0"));
+		falses.push_back(JSON("'0'"));
+		falses.push_back(JSON("false"));
+		falses.push_back(JSON("undefined"));
+		falses.push_back(JSON("'undefined'"));
+		falses.push_back(JSON("null"));
+		falses.push_back(JSON("'null'"));
+		bool anytrue = false;
+		for (const auto& json : falses)
+			anytrue |= json.asBool();
+		expect(anytrue == false);
 	}
 	{
 		std::vector<JSON> jsons;
@@ -159,12 +151,5 @@ void manipulations() {
 		for (const auto& json : jsons)
 			expectedTrue.push_back(json.asBool());
 		expect(std::find(expectedTrue.begin(), expectedTrue.end(), false) == expectedTrue.end());
-	}
-	{
-		JSON bigObject;
-		std::string bestName = "some property added by someone somewhere";
-		bigObject[bestName] = JSON("whatever this might be");
-		const JSON& jsonReferencedSomewhere1MileAwayInTheProgram = bigObject[bestName];
-		expect(jsonReferencedSomewhere1MileAwayInTheProgram.getName() == bestName);
 	}
 }

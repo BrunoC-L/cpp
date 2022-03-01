@@ -1,11 +1,9 @@
 ﻿  json.cpp
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(125,26): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(135,28): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(154,26): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(168,26): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(181,28): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(200,26): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(274,11): warning C4018: '<': signed/unsigned mismatch
-  main.cpp
-  Generating Code...
+C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(105,26): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(115,28): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(134,26): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(148,26): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(161,28): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(180,26): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(255,11): warning C4018: '<': signed/unsigned mismatch
   json.vcxproj -> C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\Debug\json.exe

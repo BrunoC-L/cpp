@@ -3,64 +3,108 @@
 #include <vector>
 #include <memory>
 
-template <class T>
-class _EventObserver {
-public:
-	std::function<void(T&)> f;
-	_EventObserver(std::function<void(T)> f) {
-		this->f = f;
+namespace detail {
+	namespace moredetail {
+		template <class Datatype>
+		class EventObserver {
+			bool _isSet = false;
+		public:
+			bool isSet() { return _isSet; }
+			std::function<void(const Datatype&)> f;
+			EventObserver(std::function<void(const Datatype&)> f) {
+				this->f = f;
+				_isSet = true;
+			}
+			void reset() {
+				_isSet = false;
+			}
+		};
 	}
-};
 
-template <typename T>
-class Event {
-private:
-	static std::vector<std::shared_ptr<_EventObserver<T>>>   subscribers;
-	static std::vector<std::shared_ptr<_EventObserver<T>>> unsubscribers;
-public:
-	static void subscribe(std::shared_ptr<_EventObserver<T>> obv) {
-		subscribers.push_back(obv);
-	}
-	static void unsubscribe(std::shared_ptr<_EventObserver<T>> obv) {
-		unsubscribers.push_back(obv);
-	}
-	static void emit(T t) {
-		for (const auto& obv : subscribers)
-			if (std::find(unsubscribers.begin(), unsubscribers.end(), obv) == unsubscribers.end())
-				obv->f(t);
-		for (const auto& obv : unsubscribers)
-			subscribers.erase(std::find(subscribers.begin(), subscribers.end(), obv));
-		unsubscribers = {};
-	}
-	static void clear() {
-		subscribers = {};
-		unsubscribers = {};
-	}
-};
+	template <typename Datatype>
+	class Emitter;
 
-template <class T>
-class EventObserver {
-	void subscribe() {
-		Event<T>::subscribe(observer);
-	}
-	void unsubscribe() {
-		Event<T>::unsubscribe(observer);
-		observer = nullptr;
-	}
-	std::shared_ptr<_EventObserver<T>> observer;
-public:
-	~EventObserver() {
-		if (observer)
+	template <class Datatype>
+	class EventObserver {
+		void subscribe() {
+			Emitter<Datatype>::emitter.subscribe(observer);
+			_isSet = true;
+		}
+		void unsubscribe() {
+			observer->reset();
+			Emitter<Datatype>::emitter.unsubscribe(observer);
+			_isSet = false;
+		}
+		bool _isSet = false;
+		std::shared_ptr<detail::moredetail::EventObserver<Datatype>> observer;
+	public:
+		EventObserver() { }
+		EventObserver(std::function<void(const Datatype&)> f) {
+			set(f);
+		}
+		~EventObserver() {
+			if (_isSet)
+				unsubscribe();
+		}
+		void set(std::function<void(const Datatype&)> f) {
+			if (_isSet)
+				unsubscribe();
+			observer = std::make_shared<detail::moredetail::EventObserver<Datatype>>(f);
+			subscribe();
+		}
+		void unset() {
 			unsubscribe();
+		}
+		bool isSet() {
+			return _isSet;
+		}
+	};
+
+	template <typename Datatype>
+	class EventEmitter {
+	private:
+		std::vector<std::shared_ptr<detail::moredetail::EventObserver<Datatype>>>   subscribers;
+		std::vector<std::shared_ptr<detail::moredetail::EventObserver<Datatype>>> unsubscribers;
+	public:
+		void subscribe(std::shared_ptr<detail::moredetail::EventObserver<Datatype>> obv) {
+			subscribers.push_back(obv);
+		}
+		void unsubscribe(std::shared_ptr<detail::moredetail::EventObserver<Datatype>> obv) {
+			unsubscribers.push_back(obv);
+		}
+		void emit(const Datatype& data) {
+			for (const auto& obv : subscribers)
+				if (obv->isSet())
+					obv->f(data);
+			for (const auto& obv : unsubscribers)
+				subscribers.erase(std::find(subscribers.begin(), subscribers.end(), obv));
+			unsubscribers = {};
+		}
+
+		void clear() {
+			subscribers = {};
+		}
+	};
+
+	template <typename Datatype>
+	class Emitter {
+	public:
+		static detail::EventEmitter<Datatype> emitter;
+	};
+	template <typename Datatype>
+	detail::EventEmitter<Datatype>  Emitter<Datatype>::emitter;
+}
+
+template <typename Datatype>
+class Event {
+public:
+	using Observer = detail::EventObserver<Datatype>;
+	using Data = Datatype;
+	void emit() {
+		detail::Emitter<Datatype>::emitter.emit(data);
 	}
-	void set(std::function<void(T)> f) {
-		observer = std::make_shared<_EventObserver<T>>(f);
-		subscribe();
-	}
-	void unset() {
-		unsubscribe();
-	}
-	bool isSet() {
-		return observer != nullptr;
-	}
+	const Datatype data;
+	Event(Datatype data) : data(data) {}
 };
+
+#define EVENT(T, ...) T(T::Data{__VA_ARGS__})

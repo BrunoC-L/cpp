@@ -140,10 +140,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="event.h" />
-    <ClInclude Include="eventTypes.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="eventTypes.cpp" />
     <ClCompile Include="example.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
