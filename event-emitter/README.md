@@ -10,3 +10,5 @@ output
 > x: 2, y: 2, shift: false
 > 
 > x: 2, y: 2, shift: false
+
+I couldn't manage to forward the parameters to the event data member so i had to provide a macro `EVENT` to instead build the data in place for the constructor to take
