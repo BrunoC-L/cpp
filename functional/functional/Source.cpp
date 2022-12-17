@@ -17,13 +17,17 @@ struct filter_t {
 	std::optional<T> opt;
 };
 
-//template <class T, class... Args>
-//using is_specialization_rm_ref = is_specialization<std::remove_reference_t<T>, Args...>;
+template<typename T>
+struct raw {
+	using type = std::remove_const_t<std::remove_reference_t<T>>;
+};
+
+template <typename T>
+using raw_t = raw<T>::type;
 
 template <typename F>
 struct map {
 	F f;
-
 	decltype(auto) operator()(auto&&... args) {
 		return f(args...);
 	}
@@ -32,7 +36,6 @@ struct map {
 template <typename F>
 struct filter {
 	F f;
-
 	decltype(auto) operator()(auto&&... args) {
 		return f(args...);
 	}
@@ -42,12 +45,10 @@ auto apply_through(auto&& element, auto&& f) {
 	throw std::runtime_error("do not call unless in decltype(apply_through(...))");
 	constexpr bool isMap = is_specialization<std::remove_reference_t<decltype(f)>, map>::value;
 	constexpr bool isFilter = is_specialization<std::remove_reference_t<decltype(f)>, filter>::value;
-	if constexpr (isMap) {
+	if constexpr (isMap)
 		return f(element);
-	}
-	else if constexpr (isFilter) {
+	else if constexpr (isFilter)
 		return element;
-	}
 	else
 		static_assert(!sizeof(decltype(f)*), "error");
 }
@@ -56,12 +57,10 @@ auto apply_through(auto&& element, auto&& f, auto&&... fs) {
 	throw std::runtime_error("do not call unless in decltype(apply_through(...))");
 	constexpr bool isMap = is_specialization<std::remove_reference_t<decltype(f)>, map>::value;
 	constexpr bool isFilter = is_specialization<std::remove_reference_t<decltype(f)>, filter>::value;
-	if constexpr (isMap) {
+	if constexpr (isMap)
 		return apply_through(f(element), fs...);
-	}
-	else if constexpr (isFilter) {
+	else if constexpr (isFilter)
 		return apply_through(element, fs...);
-	}
 	else
 		static_assert(!sizeof(decltype(f)*), "error");
 }
@@ -69,36 +68,29 @@ auto apply_through(auto&& element, auto&& f, auto&&... fs) {
 auto apply(auto&& element, auto&& f) {
 	constexpr bool isMap = is_specialization<std::remove_reference_t<decltype(f)>, map>::value;
 	constexpr bool isFilter = is_specialization<std::remove_reference_t<decltype(f)>, filter>::value;
-	using E = std::remove_const_t<std::remove_reference_t<decltype(element)>>;
+	using E = raw_t<decltype(element)>;
 	constexpr bool is_filter_t = is_specialization<E, filter_t>::value;
 
-	if constexpr (isMap && !is_filter_t) {
+	if constexpr (isMap && !is_filter_t)
 		return f(element);
-	}
-	else if constexpr (isMap && is_filter_t) {
-		using Inner = E::value_type;
-		using Next = std::remove_const_t<std::remove_reference_t<decltype(f(element.opt.value()))>>;
-		return filter_t<Next>{
+	else if constexpr (isMap && is_filter_t)
+		return filter_t<raw_t<decltype(f(element.opt.value()))>>{
 			element.opt.has_value() ?
 				std::optional(f(element.opt.value())) :
 				std::nullopt
 		};
-	}
-	else if constexpr (isFilter && !is_filter_t) {
+	else if constexpr (isFilter && !is_filter_t)
 		return f(element) ? filter_t{ std::optional(element) } : filter_t<E>{ {} };
-	}
-	else if constexpr (isFilter && is_filter_t) {
-		using Inner = E::value_type;
-		return element.opt.has_value() && f(element.opt.value()) ? filter_t<Inner>{ element.opt } : filter_t<Inner>{ {} };
-	}
+	else if constexpr (isFilter && is_filter_t)
+		return element.opt.has_value() && f(element.opt.value()) ? filter_t<E::value_type>{ element.opt } : filter_t<E::value_type>{ {} };
 	else
 		static_assert(!sizeof(decltype(f)*), "error");
 }
 
 auto apply(auto&& element, auto&& f, auto&&... fs) {
-	using E = std::remove_const_t<std::remove_reference_t<decltype(element)>>;
+	using E = raw_t<decltype(element)>;
 	constexpr bool is_filter_t = is_specialization<E, filter_t>::value;
-	using Next = std::remove_const_t<std::remove_reference_t<decltype(apply(apply(element, f), fs...))>>;
+	using Next = raw_t<decltype(apply(apply(element, f), fs...))>;
 	if constexpr (is_filter_t)
 		if (!element.opt.has_value())
 			return Next{ {} };
@@ -109,32 +101,34 @@ auto op(auto&& container, auto&&... fs) {
 	if constexpr (sizeof...(fs) == 0)
 		return container;
 	else {
-		using T = std::remove_reference_t<decltype(apply_through(container.at(0), fs...))>;
-		using U = std::remove_reference_t<decltype(apply(container.at(0), fs...))>;
+		using T = raw_t<decltype(apply_through(container.at(0), fs...))>;
+		using U = raw_t<decltype(apply(container.at(0), fs...))>;
 		std::vector<T> res;
 		res.reserve(container.size());
-		if constexpr (is_specialization<U, filter_t>::value) {
+		if constexpr (is_specialization<U, filter_t>::value)
 			for (const auto& e : container) {
 				auto v = apply(e, fs...);
 				if (v.opt.has_value())
 					res.emplace_back(std::move(v.opt.value()));
 			}
-		}
-		else {
+		else
 			for (const auto& e : container)
 				res.push_back(apply(e, fs...));
-		}
 		return res;
 	}
 }
 
-auto compose = [](auto&& f, auto&&... fs) {
+auto compose(auto&& f, auto&&... fs) {
 	if constexpr (sizeof...(fs) == 0)
-		return [=](auto... params) { return f(params...); };
+		return [=](auto&&... params) { return f(params...); };
 	else
-		return [=](auto... params) { return compose(fs...)(f(params...)); };
+		return [=](auto&&... params) { return compose(fs...)(f(params...)); };
 };
 
+template <typename... Fs>
+void f(Fs... fs) {
+
+}
 
 int main() {
 	auto x = apply(1, map{ [](int x) { return x + 1; } });
