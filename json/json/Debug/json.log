@@ -1,9 +1,4 @@
-﻿  json.cpp
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(105,26): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(115,28): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(134,26): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(148,26): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(161,28): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(180,26): warning C4018: '<': signed/unsigned mismatch
-C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\json.cpp(255,11): warning C4018: '<': signed/unsigned mismatch
+﻿  main.cpp
+C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\main.cpp(83,15): warning C4305: 'argument': truncation from 'int' to 'bool'
+C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\json\main.cpp(89,16): warning C4305: 'argument': truncation from 'int' to 'bool'
   json.vcxproj -> C:\Users\Bruno\Desktop\prog\src\c++\cpp\json\Debug\json.exe

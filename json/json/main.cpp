@@ -75,6 +75,21 @@ void parseAndStringify() {
 		expect(escapeSequences["boom"].asString("", false) == "bop\\t\\n\\\\");
 		expect(escapeSequences["boom"].asString("", true) == "bop\t\n\\");
 	}
+	{
+		std::cout << JSON(
+			"{\n"
+			"\t'test': true\n"
+			"}"
+		).asString(4) << "\n";
+		expect(
+			JSON(
+				"{\n"
+				"\t'test': true\n"
+				"}"
+			).asString(4) == "{\n"
+				"\t'test': 'true'\n"
+			"}");
+	}
 }
 
 void manipulations() {
