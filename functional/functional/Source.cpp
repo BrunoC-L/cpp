@@ -1,9 +1,11 @@
 #include <iostream>
 #include <vector>
+#include <array>
 #include <optional>
 #include <variant>
 
 #include "print.h"
+#include "helper.h"
 
 template <class T, template <class...> class Template>
 struct is_specialization : std::false_type {};
@@ -97,22 +99,22 @@ auto apply(auto&& element, auto&& f, auto&&... fs) {
 	return apply(apply(element, f), fs...);
 }
 
-auto op(auto&& container, auto&&... fs) {
+auto op(auto&& operand, auto&&... fs) {
 	if constexpr (sizeof...(fs) == 0)
-		return container;
+		return operand;
 	else {
-		using T = raw_t<decltype(apply_through(container.at(0), fs...))>;
-		using U = raw_t<decltype(apply(container.at(0), fs...))>;
+		using T = raw_t<decltype(apply_through(operand.at(0), fs...))>;
+		using U = raw_t<decltype(apply(operand.at(0), fs...))>;
 		std::vector<T> res;
-		res.reserve(container.size());
+		res.reserve(operand.size());
 		if constexpr (is_specialization<U, filter_t>::value)
-			for (const auto& e : container) {
+			for (const auto& e : operand) {
 				auto v = apply(e, fs...);
 				if (v.opt.has_value())
 					res.emplace_back(std::move(v.opt.value()));
 			}
 		else
-			for (const auto& e : container)
+			for (const auto& e : operand)
 				res.push_back(apply(e, fs...));
 		return res;
 	}
@@ -125,45 +127,153 @@ auto compose(auto&& f, auto&&... fs) {
 		return [=](auto&&... params) { return compose(fs...)(f(params...)); };
 };
 
-template <typename... Fs>
-void f(Fs... fs) {
+template <typename F>
+struct MAP {
+	F f;
+	decltype(auto) operator()(auto&&... args) {
+		return f(args...);
+	}
+};
 
+template <typename F>
+struct FILTER {
+	F f;
+	bool operator()(auto&&... args) {
+		return f(args...);
+	}
+};
+
+template <typename F>
+struct FOLD {
+	F f;
+	bool operator()(auto&&... args) {
+		return f(args...);
+	}
+};
+
+//template <typename... Ts>
+//struct FOLDGroup;
+//
+//template <typename... Ts>
+//struct MAPFILTERGroup;
+//
+//template <>
+//struct MAPFILTERGroup<> {};
+//
+//template <typename T, typename... Ts>
+//struct MAPFILTERGroup<T, Ts...> {
+//	T first;
+//	MAPFILTERGroup<Ts...> next;
+//};
+//template <typename T, typename... Ts>
+//struct FOLDGroup<T, Ts...> {
+//	T first;
+//	MAPFILTERGroup<Ts...> next;
+//};
+//
+//template <typename OP>
+//concept MapFilter = is_specialization<OP, MAP>::value || is_specialization<OP, FILTER>::value;
+//
+//template <typename OP>
+//concept Reduction = is_specialization<OP, FOLD>::value;
+//
+//template <typename T, typename... Ts>
+//	requires Reduction<T>
+//FOLDGroup<T, Ts...> constexpr group(T t, Ts... ts);
+//
+//template <typename T, typename... Ts>
+//	requires MapFilter<T>
+//MAPFILTERGroup<T, Ts...> constexpr group(T t, Ts... ts) {
+//	if constexpr (sizeof...(ts) == 0)
+//		return { t, {} };
+//	else
+//		return {
+//			t,
+//			group(ts...)
+//	};
+//}
+//
+//template <typename T, typename... Ts>
+//	requires Reduction<T>
+//FOLDGroup<T, Ts...> constexpr group(T t, Ts... ts) {
+//	if constexpr (sizeof...(ts) == 0)
+//		return { t, {} };
+//	else
+//		return {
+//			t,
+//			group(ts...)
+//	};
+//}
+
+template <typename... Ts>
+struct Group;
+
+template <>
+struct Group<> {};
+
+template <typename T, typename... Ts>
+struct Group<T, Ts...> {
+	T first;
+	Group<Ts...> next;
+};
+
+template <typename T, typename... Ts>
+Group<T, Ts...> group(T t, Ts... ts) {
+	if constexpr (sizeof...(ts) == 0)
+		return { t, {} };
+	else
+		return { t, group(ts...) };
 }
 
 int main() {
-	auto x = apply(1, map{ [](int x) { return x + 1; } });
-	auto y = apply(1, filter{ [](int x) { return x - 1; } }, map{ [](int x) { return x + 1; } });
-	auto z = apply(1, filter{ [](int x) { return x + 1; } }, filter{ [](int x) { return x + 1; } });
-	auto u = apply(1, map{ [](int x) { return x + 1; } }, map{ [](int x) { return x + 1; } });
-	auto x2 = apply(1,
-		map{ [](auto&& x) { return x + 1; } },
-		map{ [](auto&& x) { return x + 1; } },
-		filter{ [](auto&& x) { return x != 1; } });
-	auto x3 = apply(1,
-		map{
-			compose(
-				[](auto&& x) { return x + 1; },
-				[](auto&& x) { return std::to_string(x); }
-			)
-		}
-	);
-	auto x4 = apply(1,
-		map{ [](auto&& x) { return x + 1; } },
-		map{ [](auto&& x) { return std::to_string(x); } }
-	);
+	auto tuple = std::make_tuple<std::string, std::array<int, 3>, char>("S", {1, 2, 3}, 'c');
+	auto reversed = as_tuple_reversed("S", std::array<int, 3>{ 1, 2, 3 }, 'c');
 
-	auto v1 = std::vector{ 1, 2, 3, 4 };
-	println(v1);
-	auto v2 = op(v1,
-		map{ [](auto&& x) { return x + 1; } },
-		filter{ [](auto&& x) { return x > 1; } },
-		map{ [](auto&& x) { return x + 1; } },
-		map{ [](auto&& x) { return x + 1; } },
-		filter{ [](auto&& x) { return x > 1; } },
-		map{ [](auto&& x) { return x + 1; } },
-		filter{ [](auto&& x) { return x > 1; } },
-		map{ [](auto&& x) { return std::to_string(x); } });
-	println(v2);
+	auto f = [](auto first, std::array<int, 3> second, auto third) {
+		std::cout << first << ", " << "[" << second[0] << ", " << second[1] << ", " << second[2] << "]" << ", " << third << "\n";
+	};
 
+	call_from_tuple(f, tuple);
+	call_from_tuple_reverse(f, tuple);
+	auto compositeObj1 = group(
+		MAP{ 1 },
+		MAP{ 2 }
+	);
 	return 0;
+
+	//auto x = apply(1, map{ [](int x) { return x + 1; } });
+	//auto y = apply(1, filter{ [](int x) { return x - 1; } }, map{ [](int x) { return x + 1; } });
+	//auto z = apply(1, filter{ [](int x) { return x + 1; } }, filter{ [](int x) { return x + 1; } });
+	//auto u = apply(1, map{ [](int x) { return x + 1; } }, map{ [](int x) { return x + 1; } });
+	//auto x2 = apply(1,
+	//	map{ [](auto&& x) { return x + 1; } },
+	//	map{ [](auto&& x) { return x + 1; } },
+	//	filter{ [](auto&& x) { return x != 1; } });
+	//auto x3 = apply(1,
+	//	map{
+	//		compose(
+	//			[](auto&& x) { return x + 1; },
+	//			[](auto&& x) { return std::to_string(x); }
+	//		)
+	//	}
+	//);
+	//auto x4 = apply(1,
+	//	map{ [](auto&& x) { return x + 1; } },
+	//	map{ [](auto&& x) { return std::to_string(x); } }
+	//);
+
+	//auto v1 = std::vector{ 1, 2, 3, 4 };
+	//println(v1);
+	//auto v2 = op(v1,
+	//	map{ [](auto&& x) { return x + 1; } },
+	//	filter{ [](auto&& x) { return x > 1; } },
+	//	map{ [](auto&& x) { return x + 1; } },
+	//	map{ [](auto&& x) { return x + 1; } },
+	//	filter{ [](auto&& x) { return x > 1; } },
+	//	map{ [](auto&& x) { return x + 1; } },
+	//	filter{ [](auto&& x) { return x > 1; } },
+	//	map{ [](auto&& x) { return std::to_string(x); } });
+	//println(v2);
+
+	//return 0;
 }
