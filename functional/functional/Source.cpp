@@ -5,9 +5,12 @@
 #include <variant>
 #include <coroutine>
 #include <exception>
-
+#include <unordered_map>
 #include "print.h"
-#include "helper.h"
+
+int counter = 0;
+int handlecounter = 0;
+std::unordered_map<void*, int> handlemap = {};
 
 template <class T, template <class...> class Template>
 struct is_specialization : std::false_type {};
@@ -23,19 +26,28 @@ struct Generator {
     struct promise_type;
     using handle_type = std::coroutine_handle<promise_type>;
     using value_type = T;
+    int myval = 0;
 
     Generator(const Generator<T>&) = delete;
+    Generator<T>& operator=(const Generator<T>&) = delete;
     Generator(Generator<T>&& other) {
-        h_ = std::move(other.h_); // will be nullptr after move
-        full_ = other.full_;
+        *this = std::move(other);
+        std::cout << "moved " << myval << " \n";
+    }
+    Generator<T>& operator=(Generator<T>&& other) {
+        myval = other.myval;
+        std::cout << "moving " << myval << " \n";
+        h_ = other.h_;
         other.h_ = {};
+        full_ = other.full_;
         other.full_ = false;
-    };
+        return *this;
+    }
 
     struct promise_type // required
     {
-        T value_;
-        std::exception_ptr exception_;
+        T value_{};
+        std::exception_ptr exception_{};
 
         Generator get_return_object() {
             return Generator(handle_type::from_promise(*this));
@@ -60,12 +72,24 @@ struct Generator {
 
     handle_type h_;
 
-    Generator(handle_type h): h_(h) { }
+    Generator(handle_type h): h_(h) {
+        myval = ++counter;
+        handlemap[h_.address()] = ++handlecounter;
+        std::cout << "using      " << handlemap[h_.address()] << " from coroutine " << myval << "\n";
+    }
+
     ~Generator() {
-        if (h_.address()) // will be nullptr after move
+        if (h_.address()) {// will be nullptr after move
+            std::cout << "destroying " << handlemap[h_.address()] << " from coroutine " << myval << "\n";
             h_.destroy();
+            h_ = {};
+        }
+        else {
+            std::cout << "releasing moved         temporary " << myval << "\n";
+        }
     }
     explicit operator bool() {
+        std::cout << "accessing  " << handlemap[h_.address()] << " from coroutine " << myval << "\n";
         fill();
         return !h_.done();
     }
@@ -90,25 +114,25 @@ private:
 
 namespace detail {
     template <typename value_type>
-    Generator<value_type> identity_from_sequence(auto&& seq) {
+    Generator<value_type> identity_from_sequence(auto seq) {
         for (auto& e : seq)
             co_yield(e);
     }
 
     template <typename value_type>
-    Generator<value_type> identity_from_generator(auto&& seq) {
+    Generator<value_type> identity_from_generator(auto seq) {
         while (seq)
             co_yield(seq());
     }
 
     template <typename value_type, typename result_type>
-    Generator<result_type> not_identity_from_sequence(auto&& seq, auto&& f) {
+    Generator<result_type> not_identity_from_sequence(auto seq, auto f) {
         for (auto& e : seq)
             co_yield(f(e));
     }
 
     template <typename value_type, typename result_type>
-    Generator<result_type> not_identity_from_generator(auto&& seq, auto&& f) {
+    Generator<result_type> not_identity_from_generator(auto seq, auto f) {
         while (seq)
             co_yield(f(seq()));
     }
@@ -131,11 +155,11 @@ namespace detail {
 }
 
 template <typename Container>
-auto identity(Container&& seq) {
+auto identity(Container seq) {
     if constexpr (is_specialization<raw_t<Container>, Generator>::value)
-        return detail::identity_from_generator<raw_t<Container>::value_type>(std::forward<Container>(seq));
+        return detail::identity_from_generator<raw_t<Container>::value_type>(std::move(seq));
     else
-        return detail::identity_from_sequence<raw_t<Container>::value_type>(std::forward<Container>(seq));
+        return detail::identity_from_sequence<raw_t<Container>::value_type>(std::move(seq));
 }
 
 template <typename Container>
@@ -157,58 +181,65 @@ auto not_identity(Container&& seq, auto&& f) {
 template <typename F>
 struct map {
     F f;
-    constexpr auto operator()(auto&& operand) {
-        /*while (generator)
-            co_yield(f(generator()));*/
-        return f(std::forward<decltype(operand)>(operand));
+
+    map(F&& f): f(f) {
+
+    }
+
+    map(const map<F>&) = delete;
+    map<F>& operator=(const map<F>&) = delete;
+    map(map<F>&&) = default;
+    map<F>& operator=(map<F>&& other) = default;
+
+    constexpr auto operator()(auto&& generator) {
+        using T = raw_t<decltype(generator)>::value_type;
+        using R = std::invoke_result_t<F, T>;
+        return detail::not_identity_from_generator<T, R>(std::move(generator), f);
     }
 };
 
-template <typename F>
-struct filter {
-    F f;
-    constexpr bool operator()(auto&& operand) {
-        return f(std::forward<decltype(operand)>(operand));
-    }
-};
-
-template <typename F>
-struct fold {
-    F f;
-    template <typename T>
-    constexpr T&& operator()(T&& previous, T&& current) {
-        return f(std::forward<T>(previous), std::forward<T>(current));
-    }
-};
+//template <typename F>
+//struct filter {
+//    F f;
+//    constexpr bool operator()(auto&& operand) {
+//        return f(std::forward<decltype(operand)>(operand));
+//    }
+//};
+//
+//template <typename F>
+//struct fold {
+//    F f;
+//    template <typename T>
+//    constexpr T&& operator()(T&& previous, T&& current) {
+//        return f(std::forward<T>(previous), std::forward<T>(current));
+//    }
+//};
 
 template <typename T>
-auto g(auto&& generator, map<T> op, auto&&... operators) {
-    return generator;
-    /*if constexpr (sizeof...(operators) == 0)
-        return op(generator);
-    else
-        return g(op(generator), operators...);*/
-}
-
-auto f(auto& operand, auto&&... operators) {
-    if constexpr (sizeof...(operators) == 0)
-        return operand;
-    else
-        return detail::collect<int>(
-            g(identity(std::forward<decltype(operand)>(operand)), std::forward<decltype(operators)>(operators)...)
-        );
+auto g(auto&& generator, map<T> op, auto... operators) {
+    if constexpr (sizeof...(operators) == 0) {
+        return op(std::move(generator));
+    }
+    else {
+        return g(op(std::forward<decltype(generator)>(generator)), std::forward<decltype(operators)>(operators)...);
+    }
 }
 
 auto f(auto&& operand, auto&&... operators) {
-    if constexpr (sizeof...(operators) == 0)
-        return std::move(operand);
-    else
-        return detail::collect<int>(identity(std::move(operand)));
-        //return g(identity(std::forward<decltype(operand)>(operand)), std::forward<decltype(operators)>(operators)...);
+    if constexpr (sizeof...(operators) == 0) {
+        std::cout << "why?\n";
+        return operand;
+    }
+    else {
+        auto temp = g(identity(std::forward<decltype(operand)>(operand)), std::forward<decltype(operators)>(operators)...);
+        auto res = detail::collect<int>(temp);
+        return std::move(res);
+    }
+        
 }
 
 int main() {
-    std::vector<int> v1 = { 1,2,3 };
+    std::vector<int> v1 = { 1, 2, 3 };
     println(v1);
     auto v2 = detail::collect(identity(v1));
     println(v2);
@@ -224,13 +255,26 @@ int main() {
     ));
     println(v5);
 
-    auto res = f(v1, map{ [](auto x) { return -x; } });
-    return 0;
+    auto v6 = f(v1, map{ [](auto x) { return -x; } });
+    println(v6);
 
-    /*auto v4 = detail::collect(
+    auto v7 = detail::collect(
         not_identity(
             not_identity(v1, [](auto x) { return std::to_string(x); }),
-            [](auto x) { return x; }
+            [](auto x) { return std::atoi(x.c_str()); }
         )
-    );*/
+    );
+    println(v7);
+
+    auto v8 = detail::collect(
+        not_identity(
+            not_identity(identity(v1), [](auto x) { return std::to_string(x); }),
+            [](auto x) { return std::atoi(x.c_str()); }
+        )
+    );
+    println(v8);
+
+    auto v0 = f(v1, map{ [](auto x) { return -x; } }, map{ [](auto x) { return 2 * x; } });
+    println(v0);
+    return 0;
 }
