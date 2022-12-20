@@ -1,11 +1,12 @@
 #pragma once
 #include "generator.h"
 #include <vector>
+#include <optional>
+#include <utility>
 
 namespace FunctionTypes {
     struct Sequence {};
     struct Element {};
-    struct PartialSequence {};
     struct OptionalElement {};
 }
 
@@ -22,6 +23,14 @@ namespace detail {
     template <typename value_type>
     value_type collect(Generator<value_type, FunctionTypes::Element>&& seq) {
         return seq();
+    }
+
+    template <typename value_type>
+    std::optional<value_type> collect(Generator<value_type, FunctionTypes::OptionalElement>&& seq) {
+        if (seq)
+            return { seq() };
+        else
+            return {};
     }
 
     template <typename T>
@@ -62,6 +71,16 @@ namespace detail {
             return identity_element_gen(std::move(gen));
     }
 
+    /*
+    * 
+    * 
+    * 
+    *          algorithms
+    * 
+    * 
+    * 
+    */
+
     template <typename T, typename F>
     Generator<std::invoke_result_t<F, T>, FunctionTypes::Sequence> map(Generator<T, FunctionTypes::Sequence> gen, F f) {
         while (gen)
@@ -86,8 +105,75 @@ namespace detail {
         co_yield(default_value);
     }
 
+    template <typename T, typename FBefore, typename FDuring, typename FAfter, typename U>
+    Generator<std::invoke_result_t<FAfter, U>, FunctionTypes::Element> complex_fold(
+        Generator<T, FunctionTypes::Sequence> gen,
+        FBefore f_before,
+        FDuring f_during,
+        FAfter f_after,
+        U default_value
+    ) {
+        if (!gen) {
+            co_yield f_after(std::move(default_value));
+            co_return;
+        }
+        else {
+            auto cur = f_before(std::move(default_value), gen());
+            while (gen) {
+                auto e = gen();
+                auto temp = f_during(std::move(cur), e);
+                cur = std::move(temp);
+            }
+            co_yield(f_after(std::move(cur)));
+        }
+    }
+
+    template <typename T, typename U>
+    Generator<U, FunctionTypes::Element> partial_fold(Generator<T, FunctionTypes::Sequence> gen, auto f, U default_value) {
+        while (gen) {
+            auto e = gen();
+            auto temp = f(default_value, e);
+            if (temp == std::nullopt)
+                co_yield(default_value);
+            default_value = std::move(temp.value());
+        }
+        co_yield(default_value);
+    }
+
     template <typename T, typename F>
     Generator<std::invoke_result_t<F, T>, FunctionTypes::Element> apply(Generator<T, FunctionTypes::Element> gen, F f) {
         co_yield(f(gen()));
+    }
+
+    template <typename T, typename F>
+    Generator<T, FunctionTypes::OptionalElement> find(Generator<T, FunctionTypes::Sequence> gen, F f) {
+        while (gen) {
+            auto e = gen();
+            if (f(e)) {
+                co_yield(e);
+                co_return;
+            }
+        }
+    }
+
+    template <typename T>
+    Generator<T, FunctionTypes::Sequence> partial_filter(Generator<T, FunctionTypes::Sequence> gen, auto f) {
+        while (gen) {
+            auto e = gen();
+            auto temp = f(e);
+            if (temp == std::nullopt)
+                co_return;
+            else if (temp.value())
+                co_yield(e);
+        }
+    }
+
+    template <typename T>
+    Generator<T, FunctionTypes::Sequence> foreach(Generator<T, FunctionTypes::Sequence> gen, auto f) {
+        while (gen) {
+            auto e = gen();
+            f(e);
+            co_yield(e);
+        }
     }
 }

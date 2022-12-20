@@ -1,5 +1,7 @@
 #include "print.h"
 #include "functional.h"
+#include "generic_functions.h"
+#include <sstream>
 
 int main() {
     std::vector<int> v1 = { 1, 2, 3 };
@@ -91,6 +93,109 @@ int main() {
             apply{ [](auto x) { return x; } },
             filter{ [](auto x) { return x % 2; } },
             apply{ [](auto x) { return x; } });
+        println(temp);
+    }
+    {
+        auto temp = op(v1,// 1,2,3
+            map{ [](auto x) { return x; } },
+            apply{ [](auto x) { return x; } },
+            filter{ [](auto x) { return x % 2; } },
+            find{ [&](auto x) { return x == 3; } });
+        println(temp);
+    }
+    {
+        int count = 0;
+        auto sumFirst5 = partial_fold{ [&count](auto x, auto y) {
+                if (count++ == 5)
+                    return std::optional<std::remove_reference_t<decltype(x + y)>>{};
+                else
+                    return std::optional<std::remove_reference_t<decltype(x + y)>>{ x + y };
+            }, 0 };
+
+        auto temp = op(std::vector<int>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, sumFirst5);
+        println(temp);
+    }
+    {
+        auto sumUntilN = [](int n) {
+            return partial_fold{ [n](auto x, auto y) {
+                if (y == n)
+                    return std::optional<std::remove_reference_t<decltype(x + y)>>{};
+                else
+                    return std::optional<std::remove_reference_t<decltype(x + y)>>{ x + y };
+            }, 0 };
+        };
+
+        auto temp = op(
+            std::vector<int>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+            sumUntilN(7));
+        println(temp);
+    }
+    {
+        // take selects first n elements
+        auto take = [](int n) {
+            int count = 0;
+            return partial_filter{ [&count, n](auto x) {
+                if (count++ == n)
+                    return std::optional<bool>{ std::nullopt };
+                else
+                    return std::optional<bool>{ true };
+            } };
+        };
+        auto temp = op(std::vector<int>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, take(5));
+        println(temp);
+    }
+    {
+        auto temp = op(v1,// 1,2,3
+            map{ [](auto x) { return x; } },
+            apply{ [](auto x) { return x; } },
+            filter{ [](auto x) { return x % 2; } },
+            foreach{ println },
+            find{ [](auto x) { return x > 1; } });
+        println(temp);
+    }
+    {
+        auto temp = op(v1,// 1,2,3
+            map{ [](auto x) { return x; } });
+        println(temp);
+    }
+    {
+        auto weird_format = []() { return complex_fold{
+                [](auto default_value, auto first) { default_value << first; return default_value; },
+                [](auto current_value, auto next) { current_value << " : " << next; return current_value; },
+                [](auto current_value) { current_value << "}"; return current_value.str(); },
+                []() { std::stringstream ss; ss << "{"; return ss; }()
+        }; };
+        {
+            auto temp = op(v1,// 1,2,3
+                futil::conversions::maps::to_string,
+                futil::conversions::maps::to_string,
+                futil::conversions::maps::to_string,// "1", "2", "3"
+                weird_format()); // {1 : 2 : 3}
+            println(temp);
+        }
+        {
+            auto temp = op(std::vector<int>{},
+                futil::conversions::maps::to_string,
+                weird_format()); // {}
+            println(temp);
+        }
+    }
+    {
+        auto temp = op(v1,// 1,2,3
+            map{ [](auto x) { return x * x; } }, // 1,4,9
+            futil::manipulations::maps::index_from_zero());
+        println(temp);
+    }
+    {
+        auto temp = op(v1,// 1,2,3
+            map{ [](auto x) { return x * x; } }, // 1,4,9
+            futil::manipulations::maps::index_from(1));
+        println(temp);
+    }
+    {
+        auto temp = op(v1,// 1,2,3
+            map{ [](auto x) { return x * x; } }, // 1,4,9
+            futil::manipulations::maps::reverse_index_from(1));
         println(temp);
     }
 

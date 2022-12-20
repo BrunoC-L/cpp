@@ -146,6 +146,7 @@
     <ClInclude Include="detail.h" />
     <ClInclude Include="functional.h" />
     <ClInclude Include="generator.h" />
+    <ClInclude Include="generic_functions.h" />
     <ClInclude Include="print.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

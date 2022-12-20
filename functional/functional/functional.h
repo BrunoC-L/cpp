@@ -36,7 +36,34 @@ struct fold {
     using InputType = FunctionTypes::Sequence;
 
     constexpr auto operator()(auto generator) {
-        return detail::fold(std::move(generator), f, default_value);
+        return detail::fold(std::move(generator), f, std::move(default_value));
+    }
+};
+
+template <typename FBefore, typename FDuring, typename FAfter, typename D>
+struct complex_fold {
+    FBefore f_before;
+    FDuring f_during;
+    FAfter f_after;
+    D default_value;
+
+    using InputType = FunctionTypes::Sequence;
+
+    constexpr auto operator()(auto generator) {
+        return detail::complex_fold(std::move(generator), f_before, f_during, f_after, std::move(default_value));
+    }
+};
+
+template <typename F, typename D>
+    requires std::is_same<std::invoke_result_t<F, D, D>, std::optional<D>>::value
+struct partial_fold {
+    F f;
+    D default_value;
+
+    using InputType = FunctionTypes::Sequence;
+
+    constexpr auto operator()(auto generator) {
+        return detail::partial_fold(std::move(generator), f, std::move(default_value));
     }
 };
 
@@ -48,6 +75,39 @@ struct apply {
 
     constexpr auto operator()(auto generator) {
         return detail::apply(std::move(generator), f);
+    }
+};
+
+template <typename F>
+struct find {
+    F f;
+
+    using InputType = FunctionTypes::Sequence;
+
+    constexpr auto operator()(auto generator) {
+        return detail::find(std::move(generator), f);
+    }
+};
+
+template <typename F>
+struct partial_filter {
+    F f;
+
+    using InputType = FunctionTypes::Sequence;
+
+    constexpr auto operator()(auto generator) {
+        return detail::partial_filter(std::move(generator), f);
+    }
+};
+
+template <typename F>
+struct foreach {
+    F f;
+
+    using InputType = FunctionTypes::Sequence;
+
+    constexpr auto operator()(auto generator) {
+        return detail::foreach(std::move(generator), f);
     }
 };
 
