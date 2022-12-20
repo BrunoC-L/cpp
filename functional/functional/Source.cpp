@@ -5,33 +5,6 @@ int main() {
     std::vector<int> v1 = { 1, 2, 3 };
 
     {
-        auto temp = detail::collect_sequence(detail::identity_seq(v1)); // 1, 2, 3
-        println(temp);
-    }
-    {
-        auto temp = detail::collect_sequence(detail::identity_seq_gen(
-            detail::identity_seq(v1) // 1, 2, 3
-        ));
-        println(temp);
-    }
-    {
-        auto temp = detail::collect_sequence(detail::map(
-            detail::identity_seq(v1), // 1, 2, 3
-            [](auto x) { return -x; } // -1,-2,-3
-        ));
-        println(temp);
-    }
-    {
-        auto temp = detail::collect_sequence(
-            detail::map(
-                detail::map(detail::identity_seq(v1), // 1, 2, 3
-                    [](auto x) { return std::to_string(x); }), // "1", "2", "3"
-                [](auto x) { return std::atoi(x.c_str()); } // 1, 2, 3
-            )
-        );
-        println(temp);
-    }
-    {
         auto temp = op(v1, // 1, 2, 3
             map{ [](auto x) { return -x; } }); // -1,-2,-3
         println(temp);
@@ -110,6 +83,14 @@ int main() {
             } },                                   // [0, 1, 0.5, 0.333, 0.25, 0.2]
             map{ [](auto x) { return 1 - x; } }
         );
+        println(temp);
+    }
+    {
+        auto temp = op(v1,// 1,2,3
+            map{ [](auto x) { return x; } },
+            apply{ [](auto x) { return x; } },
+            filter{ [](auto x) { return x % 2; } },
+            apply{ [](auto x) { return x; } });
         println(temp);
     }
 
