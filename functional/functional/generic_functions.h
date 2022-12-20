@@ -6,10 +6,22 @@
 namespace futil {
 
 	namespace collectors {
-		constexpr auto tomap = apply{ [](auto gen) {
-			return std::unordered_map<int,int>{};
-			//return std::unordered_map m(gen);
-		} };
+		template <typename T, typename U>
+		const auto tomap = fold{ [](auto m, std::pair<T, U> next) {
+			m[next.first] = next.second;
+			return m;
+		}, std::unordered_map<T, U>{} };
+	}
+
+	namespace folds {
+		constexpr auto sum = fold{ [](auto a, auto b) { return a + b; }, int{0} };
+		constexpr auto sum_with_starting_value = [](auto starting_value) {
+			return fold{ [](auto a, auto b) { return a + b; }, starting_value };
+		};
+		constexpr auto mul = fold{ [](auto a, auto b) { return a * b; }, int{1} };
+		constexpr auto mul_with_starting_value = [](auto starting_value) {
+			return fold{ [](auto a, auto b) { return a + b; }, starting_value };
+		};
 	}
 
 	namespace conversions {
@@ -32,21 +44,16 @@ namespace futil {
 	namespace manipulations {
 		namespace maps {
 			constexpr auto index_from = [](int beg) {
-				int i = beg;
-				return map{ [&i](auto x) -> std::pair<int, decltype(x)> {
-					return std::pair<unsigned, decltype(x)>{ i++, x };
+				return map{ [i = beg](auto x) mutable -> std::pair<int, decltype(x)> {
+					return std::pair{ i++, x };
 				} };
 			};
-			constexpr auto index_from_zero = []() {
-				int i = 0;
-				return map{ [&i](auto x) -> std::pair<int, decltype(x)> {
-					return std::pair<int, decltype(x)>{ i++, x };
+			constexpr auto index_from_zero = map{ [i = 0](auto x) mutable -> std::pair<int, decltype(x)> {
+					return std::pair{ i++, x };
 				} };
-			};
 			constexpr auto reverse_index_from = [](int beg) {
-				int i = beg;
-				return map{ [&i](auto x) -> std::pair<int, decltype(x)> {
-					return std::pair<unsigned, decltype(x)>{ i--, x };
+				return map{ [i = beg](auto x) mutable -> std::pair<int, decltype(x)> {
+					return std::pair{ i--, x };
 				} };
 			};
 		}

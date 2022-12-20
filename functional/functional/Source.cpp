@@ -183,7 +183,8 @@ int main() {
     {
         auto temp = op(v1,// 1,2,3
             map{ [](auto x) { return x * x; } }, // 1,4,9
-            futil::manipulations::maps::index_from_zero());
+            futil::manipulations::maps::index_from_zero, // {0, 1}, {1, 4}, {2, 9}
+            futil::manipulations::maps::index_from_zero); // {0, {0, 1}}, {1, {1, 4}}, {2, {2, 9}}
         println(temp);
     }
     {
@@ -196,6 +197,18 @@ int main() {
         auto temp = op(v1,// 1,2,3
             map{ [](auto x) { return x * x; } }, // 1,4,9
             futil::manipulations::maps::reverse_index_from(1));
+        println(temp);
+    }
+    {
+        auto temp = op(v1,// 1,2,3
+            futil::folds::sum);
+        println(temp);
+    }
+    {
+        auto temp = op(v1,// 1,2,3
+            map{ [](auto x) { return x * x; } }, // 1,4,9
+            futil::manipulations::maps::index_from(1),
+            futil::collectors::tomap<int, int>);
         println(temp);
     }
 
