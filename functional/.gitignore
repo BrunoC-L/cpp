@@ -1,4 +1,4 @@
-*
+x64/
+functional/x64/
 !functional.sln
-!functional/*
 !.gitignore
