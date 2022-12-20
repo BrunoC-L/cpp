@@ -23,7 +23,13 @@
     <ClInclude Include="print.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="helper.h">
+    <ClInclude Include="detail.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="functional.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="generator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

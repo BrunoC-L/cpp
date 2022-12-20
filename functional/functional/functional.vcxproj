@@ -143,7 +143,9 @@
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="helper.h" />
+    <ClInclude Include="detail.h" />
+    <ClInclude Include="functional.h" />
+    <ClInclude Include="generator.h" />
     <ClInclude Include="print.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
