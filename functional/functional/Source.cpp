@@ -4,7 +4,15 @@
 #include <sstream>
 
 int main() {
+
+    using print_ns::println;
+
     std::vector<int> v1 = { 1, 2, 3 };
+
+    {
+        auto temp = op(std::stringstream{"123"});
+        println(temp);
+    }
 
     {
         auto temp = op(v1, // 1, 2, 3
@@ -104,15 +112,15 @@ int main() {
         println(temp);
     }
     {
-        int count = 0;
-        auto sumFirst5 = partial_fold{ [&count](auto x, auto y) {
+        auto sumFirst5 = []() {
+            return partial_fold{ [count=0](auto x, auto y) mutable {
                 if (count++ == 5)
                     return std::optional<std::remove_reference_t<decltype(x + y)>>{};
                 else
                     return std::optional<std::remove_reference_t<decltype(x + y)>>{ x + y };
-            }, 0 };
+            }, 0 }; };
 
-        auto temp = op(std::vector<int>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, sumFirst5);
+        auto temp = op(std::vector<int>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, sumFirst5());
         println(temp);
     }
     {
@@ -149,7 +157,7 @@ int main() {
             map{ [](auto x) { return x; } },
             apply{ [](auto x) { return x; } },
             filter{ [](auto x) { return x % 2; } },
-            foreach{ println },
+            foreach{ futil::operations::println() },
             find{ [](auto x) { return x > 1; } });
         println(temp);
     }
@@ -167,24 +175,60 @@ int main() {
         }; };
         {
             auto temp = op(v1,// 1,2,3
-                futil::conversions::maps::to_string,
-                futil::conversions::maps::to_string,
-                futil::conversions::maps::to_string,// "1", "2", "3"
+                futil::conversions::maps::to_string(),
+                futil::conversions::maps::to_string(),
+                futil::conversions::maps::to_string(),// "1", "2", "3"
                 weird_format()); // {1 : 2 : 3}
             println(temp);
         }
         {
             auto temp = op(std::vector<int>{},
-                futil::conversions::maps::to_string,
+                futil::conversions::maps::to_string(),
                 weird_format()); // {}
             println(temp);
         }
     }
     {
+        auto weird_format = complex_fold{
+                [](auto default_value, auto first) { default_value << first; return default_value; },
+                [](auto current_value, auto next) { current_value << " : " << next; return current_value; },
+                [](auto current_value) { current_value << "}"; return current_value.str(); },
+                []() { std::stringstream ss; ss << "{"; return ss; }()
+        };
+        {
+            auto temp = op(v1,// 1,2,3
+                futil::conversions::maps::to_string(),
+                futil::conversions::maps::to_string(),
+                futil::conversions::maps::to_string(),// "1", "2", "3"
+                std::move(weird_format)); // {1 : 2 : 3}
+            println(temp);
+        }
+    }
+    {
+        int k = 3;
+        auto f1 = map{ [&](auto x) { return x * k++; } };
+        auto f2 = futil::manipulations::maps::index_from(1);
+        auto f3 = futil::collectors::tomap<int, int>();
+        {
+            auto temp = op(v1, // 1,2,3
+                std::move(f1), // 1*3, 2*4, 3*5
+                std::move(f2),
+                std::move(f3));
+            println(temp); // [{ 1, 3 }, { 2, 8 }, { 3, 15 }]
+        }
+        {
+            auto temp = op(v1, // 1,2,3
+                std::move(f1), // 1*6, 2*7, 3*8
+                std::move(f2),
+                std::move(f3));
+            println(temp); // [{ 1, 6 }, { 2, 14 }, { 3, 24 }]
+        }
+    }
+    {
         auto temp = op(v1,// 1,2,3
             map{ [](auto x) { return x * x; } }, // 1,4,9
-            futil::manipulations::maps::index_from_zero, // {0, 1}, {1, 4}, {2, 9}
-            futil::manipulations::maps::index_from_zero); // {0, {0, 1}}, {1, {1, 4}}, {2, {2, 9}}
+            futil::manipulations::maps::index_from_zero(), // {0, 1}, {1, 4}, {2, 9}
+            futil::manipulations::maps::index_from_zero()); // {0, {0, 1}}, {1, {1, 4}}, {2, {2, 9}}
         println(temp);
     }
     {
@@ -201,14 +245,14 @@ int main() {
     }
     {
         auto temp = op(v1,// 1,2,3
-            futil::folds::sum);
+            futil::folds::sum());
         println(temp);
     }
     {
         auto temp = op(v1,// 1,2,3
             map{ [](auto x) { return x * x; } }, // 1,4,9
             futil::manipulations::maps::index_from(1),
-            futil::collectors::tomap<int, int>);
+            futil::collectors::tomap<int, int>());
         println(temp);
     }
 

@@ -8,7 +8,7 @@ struct Generator {
     struct promise_type;
     using handle_type = std::coroutine_handle<promise_type>;
     using value_type = T;
-
+    
     Generator(const Generator&) = delete;
     Generator& operator=(const Generator&) = delete;
     Generator(Generator&& other) {
