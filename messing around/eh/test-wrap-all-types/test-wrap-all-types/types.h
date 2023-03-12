@@ -2,55 +2,99 @@
 #include <utility>
 
 template <typename T> class Ref;
-template <typename T> class ConstRef;
-
-template <typename T>
-Ref<T> ref(T& obj) {
-	return Ref<T>(obj);
-}
-
-template <typename T>
-ConstRef<T> const_ref(const T& obj) {
-	return ConstRef<T>(obj);
-}
+template <typename T> class Value;
+template <typename T> class Temporary;
 
 template <typename T>
 class Ref {
 public:
-	Ref(T& obj) : ref(obj) {};
-	Ref(const T&) = delete;
+	Ref(T& v) : v(v) {};
 
 	Ref(const Ref&) = default;
-	Ref& operator=(const Ref&) = default;
-	Ref(Ref&&) = default;
-	Ref& operator=(Ref&&) = default;
-
-	T& get() {
-		return ref;
-	}
-	ConstRef<T> get_const() const {
-		return const_ref(ref);
-	}
+	Ref& operator=(const Ref&) = delete;
 	~Ref() = default;
+
+	T& use() {
+		return v;
+	}
+
+	Value<T> copy() {
+		return Value(v);
+	}
+
+	Temporary<T> move() {
+		return Temporary(std::move(v));
+	}
+
+	Ref<T> reference() {
+		return *this;
+	}
+
 protected:
-	T& ref;
+	T& v;
 };
 
 template <typename T>
-class ConstRef {
+class Value {
 public:
-	ConstRef(T&) = delete;
-	ConstRef(const T& obj) : ref(obj) {};
+	Value(T&& v) : v(std::move(v)) {};
+	Value(const T& v) : v(v) {};
 
-	ConstRef(const ConstRef&) = default;
-	ConstRef& operator=(const ConstRef&) = default;
-	ConstRef(ConstRef&&) = default;
-	ConstRef& operator=(ConstRef&&) = default;
+	Value(Value&& v) : v(std::move(v.v)) {};
+	Value(const Value&) = delete;
+	Value& operator=(const Value&) = delete;
+	Value& operator=(Temporary<T>&& other) { v = std::move(other.v); };
 
-	ConstRef<T> get_const() const {
-		return const_ref(ref);
+	T& use() {
+		return v;
 	}
-	~ConstRef() = default;
+
+	Value<T> copy() {
+		return Value(v);
+	}
+
+	Temporary<T> move() {
+		return Temporary(std::move(v));
+	}
+
+	Ref<T> reference() {
+		return Ref(v);
+	}
+
+	~Value() = default;
 protected:
-	T& ref;
+	T v;
+};
+
+template <typename T>
+class Temporary {
+public:
+	Temporary(T&& v) : v(std::move(v)) {};
+
+	Temporary(Temporary& v) : v(std::move(v.v)) {};
+	Temporary& operator=(const Temporary&) = delete;
+
+	T& use() {
+		return v;
+	}
+
+	Value<T> copy() {
+		return Value(std::move(v));
+	}
+
+	Temporary<T> move() {
+		return Temporary(std::move(v));
+	}
+
+	Ref<T> reference() {
+		return Ref(v);
+	}
+
+	operator Value<T>() {
+		return copy();
+	}
+
+	~Temporary() = default;
+protected:
+	T v;
 };
