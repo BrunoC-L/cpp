@@ -10,8 +10,10 @@ class Ref {
 public:
 	Ref(T& v) : v(v) {};
 
-	Ref(const Ref&) = default;
+	Ref(const Ref&) = delete;
+	Ref(Ref&&) = default;
 	Ref& operator=(const Ref&) = delete;
+	Ref& operator=(Ref&&) = default;
 	~Ref() = default;
 
 	T& use() {
@@ -27,7 +29,7 @@ public:
 	}
 
 	Ref<T> reference() {
-		return *this;
+		return Ref(v);
 	}
 
 protected:
@@ -43,7 +45,7 @@ public:
 	Value(Value&& v) : v(std::move(v.v)) {};
 	Value(const Value&) = delete;
 	Value& operator=(const Value&) = delete;
-	Value& operator=(Temporary<T>&& other) { v = std::move(other.v); };
+	//Value& operator=(Temporary<T>&& other) { v = std::move(other.v); };
 
 	T& use() {
 		return v;
@@ -71,6 +73,7 @@ class Temporary {
 public:
 	Temporary(T&& v) : v(std::move(v)) {};
 
+	Temporary(Temporary&& v) : v(std::move(v.v)) {};
 	Temporary(Temporary& v) : v(std::move(v.v)) {};
 	Temporary& operator=(const Temporary&) = delete;
 
@@ -79,7 +82,7 @@ public:
 	}
 
 	Value<T> copy() {
-		return Value(std::move(v));
+		return Value(v);
 	}
 
 	Temporary<T> move() {
@@ -91,7 +94,7 @@ public:
 	}
 
 	operator Value<T>() {
-		return copy();
+		return Value(std::move(v));
 	}
 
 	~Temporary() = default;
