@@ -1,125 +1,73 @@
 #include "types.h"
 #include <iostream>
+#include "use-cases.h"
 
-constexpr bool printing = false;
+struct SomeType {};
 
-struct A {
-	static unsigned create_or_copy_count;
-	A() {
-		if (printing)
-			std::cout << "Create\n";
-		A::create_or_copy_count += 1;
-	}
-	A(const A&) {
-		if (printing)
-			std::cout << "Copy\n";
-		A::create_or_copy_count += 1;
-	}
-	A(A&&) {
-		if (printing)
-			std::cout << "Move\n";
-	}
-	~A() {
-		if (printing)
-			std::cout << "Destroy\n";
-	}
-};
-unsigned A::create_or_copy_count = 0;
+auto function_taking_ref(Ref<SomeType> a) {}
 
-auto function_taking_ref(Ref<A> a) {}
+auto function_that_matches_either_c_or_t(ConstRef<SomeType> a) {}
 
-auto function_taking_value(Value<A> a) {}
+auto function_that_matches_either_c_or_t(Temporary<SomeType> a) {}
 
-auto function_that_matches_either(Ref<A> a) {}
+void example() {
+	// Three Reference types exist in this system
+	// Their use in terms of deciding which type to take as a function parameter is as such:
+	// 1. Const Reference : indicates a need to read from the object
+	// 2. Reference       : indicates a need to write to the object, but not move it
+	// 3. Temporary       : indicates a need to move the object, to store it for example
 
-auto function_that_matches_either(Value<A> a) {}
+	// First, create a value
+	SomeType a; 
+	// Then create one of the tree reference types from the value:
+	auto cref = ConstRef(a);
+	auto ref = Ref(a);
+	auto tref = Temporary(a);
+	// technically you can also do this because const references extend the lifetime of rvalues
+	auto another_cref = ConstRef(SomeType{});
 
-void expect_count_to_be(unsigned n) {
-	if (A::create_or_copy_count != n) {
-		std::cout << "Expected count to be " << n << " but was " << A::create_or_copy_count << "\nExiting...\n";
-		exit(1);
-	}
+	// then call functions safely, as the three reference types never implicitly convert
+	// example:
+	function_taking_ref(ref);
+	function_that_matches_either_c_or_t(cref);
+	function_that_matches_either_c_or_t(tref);
+
+	// Ref and Temporary are convertible to ConstRef since it is more restrictive (no write allowed)
+	ref.const_ref();
+	tref.const_ref();
+	// Temporary is convertible to Ref since it is more restrictive (no move allowed)
+	tref.ref();
+
+	// each reference offers the .use() method
+	cref.use();
+	ref.use();
+	tref.use();
+
+	// "use" returns the referenced value, in theory there is no
+	// difference between calling use on a temporary or on a reference
+	// but in practice, temporary are meant to be std::move(...)'d
+	// and references are not.
+	// By "meant to" it is implied that the last call in the stack with a temporary
+	// argument makes use of the fact that is it a temporary and moves it
+	// otherwise it would have been simpler for everyone to just use a reference
+
+	// to move the value referenced by a Temporary, you can either
+	std::move(tref.use()); /*or */ tref.move();
+
+	// and to copy a referenced value
+	ref.copy();
+	cref.copy();
+	tref.copy();
+
+	// copying is sometimes necessary, for example if you
+	// want to call a function that requires a temporary but you have a reference
+	// this can happen often as taking references is more versatile but
+	// you should consider writing 2 variants of the function when you can, 1 taking ref and 1 temp
+	// but anyway if all you have is a ref and you need a temp, copy the value and create a temp from it
 }
 
+
 int main() {
-	expect_count_to_be(0);
-	{
-		if (printing)
-			std::cout << "1:\n";
-		// notice that with a reference, 
-		// we can call function_that_refs but not function_that_copies
-		// but we can by calling x.copy() or by calling x.move()
-		// which will create a value by moving instead of copying
-
-		A a;
-		expect_count_to_be(1);
-		auto x = ref_of(a);
-		auto y = x.ref();
-
-		function_taking_ref(x.ref());
-		//function_taking_value(x); // doesn't compile
-		//function_taking_value(x.reference()); // doesn't compile
-		function_taking_ref(y.ref());
-		//function_taking_value(y); // doesn't compile
-		//function_taking_value(y.reference()); // doesn't compile
-
-		expect_count_to_be(1);
-
-		//function_taking_value(x); // doesn't compile
-		function_taking_value(x.copy());
-
-		expect_count_to_be(2);
-
-		//function_taking_value(y); // doesn't compile
-		function_taking_value(y.copy());
-
-		expect_count_to_be(3);
-	}
-	{
-		if (printing)
-			std::cout << "\n2:\n";
-
-		// notice how we can't directly call function_that_copies
-		// with a value, we need to explicitly copy or move
-		// this is done to avoid mistakenly copying when we thought we were moving
-
-		Value<A> x = move_into_value(A{});
-
-		expect_count_to_be(4);
-
-		// function_taking_value(x); // doesn't compile
-		function_taking_value(x.move());
-		function_taking_value(x.copy());
-
-		expect_count_to_be(5);
-	}
-	{
-		if (printing)
-			std::cout << "\n3:\n";
-		// See how we can't accidentally cast
-		// we need to decide exactly what we do
-		// with the value by calling ref copy or move
-
-		Value<A> x = move_into_value(A{});
-
-		expect_count_to_be(6);
-
-		//function_that_matches_either(x); // doesn't compile
-		function_that_matches_either(x.ref());
-		function_that_matches_either(x.copy());
-
-		expect_count_to_be(7);
-
-		function_that_matches_either(x.move());
-
-		expect_count_to_be(7);
-	}
-	{
-		if (printing)
-			std::cout << "\n4:\n";
-		Value<A> x1 = move_into_value(A{});
-		expect_count_to_be(8);
-		Value<A> x2 = copy_into_value(A{});
-		expect_count_to_be(10);
-	}
+	example();
+	use_cases();
 }

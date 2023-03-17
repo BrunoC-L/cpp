@@ -1,84 +1,80 @@
 #pragma once
 #include <utility>
 
+template <typename T> class ConstRef;
 template <typename T> class Ref;
-template <typename T> class Value;
 template <typename T> class Temporary;
 
 template <typename T>
-auto ref_of(T& v) {
-	return Ref<T>::of(v);
-}
+class ConstRef {
+public:
+	ConstRef(const T& v) : v(v) {};
+	ConstRef(ConstRef&&) = default;
+	ConstRef(const ConstRef&) = default;
+	~ConstRef() = default;
 
-template <typename T>
-auto move_into_value(T&& v) {
-	return Value<T>::of_moved(std::move(v));
-}
+	const T& use() {
+		return v;
+	}
 
-template <typename T>
-auto copy_into_value(const T& v) {
-	return Value<T>::of_copy(v);
-}
+	T copy() {
+		return v;
+	}
+
+protected:
+	const T& v;
+};
 
 template <typename T>
 class Ref {
 public:
-	static Ref of(T& v) {
-		return Ref<T>(v);
-	}
-	
+	Ref(T& v) : v(v) {};
 	Ref(Ref&&) = default;
+	Ref(const Ref&) = default;
 	~Ref() = default;
 
 	T& use() {
 		return v;
 	}
 
-	Value<T> copy() {
-		return copy_into_value(v);
+	T copy() {
+		return v;
 	}
 
-	Ref<T> ref() {
-		return ref_of(v);
+	ConstRef<T> const_ref() {
+		return ConstRef(v);
 	}
-
 protected:
-	Ref(T& v) : v(v) {};
 	T& v;
 };
 
 template <typename T>
-class Value {
+class Temporary {
 public:
-	static Value of_copy(const T& v) {
-		return Value(v);
-	}
-
-	static Value of_moved(T&& v) {
-		return Value(std::move(v));
-	}
-
-	Value(Value&&) = default;
-	~Value() = default;
+	Temporary(T& v) : v(v) {};
+	Temporary(Temporary&&) = default;
+	Temporary(const Temporary&) = default;
+	~Temporary() = default;
 
 	T& use() {
 		return v;
 	}
 
-	Value<T> copy() {
-		return Value(v);
+	T copy() {
+		return v;
 	}
 
-	Value<T> move() {
-		return Value(std::move(v));
+	T&& move() {
+		return std::move(v);
 	}
 
 	Ref<T> ref() {
-		return ref_of(v);
+		return Ref(v);
 	}
 
+	ConstRef<T> const_ref() {
+		return ConstRef(v);
+	}
 protected:
-	Value(T&& v) : v(std::move(v)) {};
-	Value(const T& v) : v(v) {};
-	T v;
+	T& v;
 };

@@ -141,6 +141,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp" />
+    <ClCompile Include="use-cases.cpp" />
+    <ClCompile Include="use-cases.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="types.h" />
