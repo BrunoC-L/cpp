@@ -13,11 +13,11 @@ public:
 	ConstRef(const ConstRef&) = default;
 	~ConstRef() = default;
 
-	const T& use() {
+	const T& use() const {
 		return v;
 	}
 
-	T copy() {
+	T copy() const {
 		return v;
 	}
 
@@ -37,7 +37,7 @@ public:
 		return v;
 	}
 
-	T copy() {
+	T copy() const {
 		return v;
 	}
 
@@ -60,7 +60,7 @@ public:
 		return v;
 	}
 
-	T copy() {
+	T copy() const {
 		return v;
 	}
 

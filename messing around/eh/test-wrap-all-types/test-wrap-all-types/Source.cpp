@@ -1,6 +1,7 @@
 #include "types.h"
 #include <iostream>
 #include "use-cases.h"
+#include <vector>
 
 struct SomeType {};
 
@@ -23,11 +24,22 @@ void example() {
 	auto cref = ConstRef(a);
 	auto ref = Ref(a);
 	auto tref = Temporary(a);
-	// technically you can also do this because const references extend the lifetime of rvalues
-	auto another_cref = ConstRef(SomeType{});
+	// const references extend the lifetime of rvalues
+	// this has nothing to do specifically with the 3 reference types, it is very useful to keep in mind
+	// example initalizing ConstRef with a SomeType&&
+	ConstRef(SomeType{});
+	// this means that if you store const references without copying, there is a
+	// chance that as soon as you store and return from the function
+	// the reference is invalidated as the rvalue is destroyed.
+	// this is absolutely crucial to keep in mind in order to avoid headaches
+	// so never store without copying like so
+	{
+		std::vector<SomeType> v;
+		v.push_back(ConstRef(SomeType{}).copy());
+	}
 
-	// then call functions safely, as the three reference types never implicitly convert
-	// example:
+	// Call functions safely, as the three reference types never
+	// implicitly convert to eachother, example:
 	function_taking_ref(ref);
 	function_that_matches_either_c_or_t(cref);
 	function_that_matches_either_c_or_t(tref);
@@ -44,28 +56,24 @@ void example() {
 	tref.use();
 
 	// "use" returns the referenced value, in theory there is no
-	// difference between calling use on a temporary or on a reference
+	// difference between a temporary or a reference
 	// but in practice, temporary are meant to be std::move(...)'d
 	// and references are not.
 	// By "meant to" it is implied that the last call in the stack with a temporary
 	// argument makes use of the fact that is it a temporary and moves it
 	// otherwise it would have been simpler for everyone to just use a reference
+	// by simpler, it is meant that if for example you have a reference and a function requires a temporary
+	// you will have to copy, but if that same function required a reference you wouldn't have to copy
+	// so do not ask for a temporary if you don't need one
 
 	// to move the value referenced by a Temporary, you can either
 	std::move(tref.use()); /*or */ tref.move();
 
-	// and to copy a referenced value
+	// and every reference type allow to copy the referenced value
 	ref.copy();
 	cref.copy();
 	tref.copy();
-
-	// copying is sometimes necessary, for example if you
-	// want to call a function that requires a temporary but you have a reference
-	// this can happen often as taking references is more versatile but
-	// you should consider writing 2 variants of the function when you can, 1 taking ref and 1 temp
-	// but anyway if all you have is a ref and you need a temp, copy the value and create a temp from it
 }
-
 
 int main() {
 	example();
