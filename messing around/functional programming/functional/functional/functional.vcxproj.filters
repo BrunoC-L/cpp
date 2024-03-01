@@ -18,6 +18,9 @@
     <ClCompile Include="Source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="print.h">
@@ -34,6 +37,18 @@
     </ClInclude>
     <ClInclude Include="generic_functions.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="iterators.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="iterators2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="int.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="generated.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

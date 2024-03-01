@@ -27,7 +27,7 @@ struct JoinedString {
 template <typename Delim, typename String, typename... Strings>
 struct DelimJoinedString {
     static constexpr std::string str() {
-        if constexpr (sizeof...(Strings))
+        if constexpr (sizeof...(Strings) > 0)
             return JoinedString<String, Delim, DelimJoinedString<Delim, Strings...>>::str();
         else
             return String::str();
@@ -54,5 +54,6 @@ int main() {
     // "abc, 123, 123, abc"
     using commaabc123123abc = DelimJoinedString<String<", ">, abc, s123, s123, abc>;
     std::cout << commaabc123123abc::str() << "\n";
+
     return 0;
 }

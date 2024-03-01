@@ -26,6 +26,53 @@ struct hold_whatever {
 	T t;
 };
 
+class printoncreate {
+public:
+	printoncreate() {
+		std::cout << "create\n";
+	}
+	printoncreate(const printoncreate&) {
+		std::cout << "copy constructor\n";
+	}
+	printoncreate(printoncreate&&) {
+		std::cout << "move constructor\n";
+	}
+	~printoncreate() {
+		std::cout << "destroy\n";
+	}
+};
+
+// never called!
+int rvalue_lvalue_preference(const auto& val, int i) {
+	std::cout << "never called!!!\n";
+	return 0;
+}
+
+// never called!
+int rvalue_lvalue_preference(auto& val, int i) {
+	std::cout << "copy_elision_test &\n";
+	if (i < 0)
+		return 0;
+	else if (i % 2)
+		// calls non const lvalue function
+		return rvalue_lvalue_preference(val, i - 1) + 1;
+	else
+		// calls rvalue function
+		return rvalue_lvalue_preference(std::move(val), i - 1) + 1;
+}
+
+int rvalue_lvalue_preference(auto&& val, int i) {
+	std::cout << "copy_elision_test &&\n";
+	if (i < 0)
+		return 0;
+	else if (i % 2)
+		// calls non const lvalue function
+		return rvalue_lvalue_preference(val, i - 1) + 1;
+	else
+		// calls rvalue function
+		return rvalue_lvalue_preference(std::move(val), i - 1) + 1;
+}
+
 int main() {
 	{
 		int i = 1;
@@ -97,7 +144,11 @@ int main() {
 		static_assert(std::is_same_v<const int&, decltype(z3.t)>);
 		static_assert(std::is_same_v<int&&, decltype(z4.t)>);
 		static_assert(std::is_same_v<const int&&, decltype(z5.t)>);
-
-		return 0;
 	}
+	{
+		// calls function many times but never calls move constructor
+		rvalue_lvalue_preference(printoncreate(), 9);
+	}
+
+	return 0;
 }

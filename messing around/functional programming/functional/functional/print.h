@@ -10,7 +10,7 @@ namespace print_ns {
 	struct is_iterable : std::false_type {};
 
 	template <typename T>
-	struct is_iterable<T, std::void_t<decltype(std::begin(std::declval<T>())), decltype(std::end(std::declval<T>()))>> : std::true_type {};
+	struct is_iterable<T, std::void_t<decltype(begin(std::declval<T>())), decltype(end(std::declval<T>()))>> : std::true_type {};
 
 	template <typename T, typename = void>
 	struct is_string : std::false_type {};
@@ -61,11 +61,11 @@ namespace print_ns {
 		}
 		if constexpr (sizeof... (ts) > 0) {
 			std::cout << " ";
-			print(ts...);
+			print(std::forward<decltype(ts)>(ts)...);
 		}
 	};
 
-	auto println = [](auto&& t, auto&&... ts) {
-		print(t, ts..., "\n");
+	auto println = [](auto&&... ts) {
+		print(std::forward<decltype(ts)>(ts)..., "\n");
 	};
 };

@@ -78,3 +78,27 @@ public:
 protected:
 	T& v;
 };
+
+template <class T, template <class...> class Template>
+struct is_specialization : std::false_type {};
+
+template <template <class...> class Template, class... Args>
+struct is_specialization<Template<Args...>, Template> : std::true_type {};
+
+template <typename T>
+concept AnyReference = std::disjunction_v<is_specialization<T, Ref>, is_specialization<T, ConstRef>, is_specialization<T, Temporary>>;
+
+template <typename T>
+concept NonTemporary = std::disjunction_v<is_specialization<T, Ref>, is_specialization<T, ConstRef>>;
+
+template <template <class...> class T1, template <class...> class T2>
+struct is_same_template : std::false_type {};
+
+template <template <class...> class T1>
+struct is_same_template<T1, T1> : std::true_type {};
+
+template <template <typename> typename T>
+concept AnyReferenceTemplate = std::disjunction_v<is_same_template<T, Ref>, is_same_template<T, ConstRef>, is_same_template<T, Temporary>>;
+
+template <template <typename> typename T>
+concept NonTemporaryTemplate = std::disjunction_v<is_same_template<T, Ref>, is_same_template<T, ConstRef>>;

@@ -4,6 +4,20 @@
 #include <optional>
 #include <utility>
 
+#define NonCopyableNonDefaultConstructible(T)\
+T() = delete;\
+T& operator=(const T&) = delete;\
+T(const T&) = delete;\
+T& operator=(T&&) = default;\
+T(T&&) = default;
+
+#define NonDefaultConstructible(T) \
+T() = delete;\
+T& operator=(const T&) = default;\
+T(const T&) = default;\
+T& operator=(T&&) = default;\
+T(T&&) = default;
+
 namespace FunctionTypes {
     struct Sequence {};
     struct Element {};
@@ -35,7 +49,7 @@ namespace detail {
 
     template <typename T>
     Generator<T, FunctionTypes::Element> identity_element(T t) {
-        co_yield(t);
+        co_yield t;
     }
 
     // Conversions between element and sequence generators
@@ -54,13 +68,13 @@ namespace detail {
         std::vector<T> res;
         while (gen)
             res.push_back(gen());
-        co_yield(res);
+        co_yield res;
     }
 
     template <typename T>
     Generator<typename T::value_type, FunctionTypes::Sequence> identity_seq_gen(Generator<T, FunctionTypes::Element> gen) {
         for (auto& e : gen())
-            co_yield(e);
+            co_yield e;
     }
 
     template <typename Target>
@@ -84,7 +98,7 @@ namespace detail {
     template <typename T, typename F>
     Generator<std::invoke_result_t<F, T>, FunctionTypes::Sequence> map(Generator<T, FunctionTypes::Sequence> gen, F f) {
         while (gen)
-            co_yield(f(gen()));
+            co_yield f(gen());
     }
 
     template <typename T>
@@ -92,7 +106,7 @@ namespace detail {
         while (gen) {
             auto e = gen();
             if (f(e))
-                co_yield(e);
+                co_yield e;
         }
     }
 
@@ -102,7 +116,7 @@ namespace detail {
             auto e = gen();
             default_value = f(default_value, e);
         }
-        co_yield(default_value);
+        co_yield default_value;
     }
 
     template <typename T, typename FBefore, typename FDuring, typename FAfter, typename U>
@@ -124,7 +138,7 @@ namespace detail {
                 auto temp = f_during(std::move(cur), e);
                 cur = std::move(temp);
             }
-            co_yield(f_after(std::move(cur)));
+            co_yield f_after(std::move(cur));
         }
     }
 
@@ -134,15 +148,15 @@ namespace detail {
             auto e = gen();
             auto temp = f(default_value, e);
             if (temp == std::nullopt)
-                co_yield(default_value);
+                co_yield default_value;
             default_value = std::move(temp.value());
         }
-        co_yield(default_value);
+        co_yield default_value;
     }
 
     template <typename T, typename F>
     Generator<std::invoke_result_t<F, T>, FunctionTypes::Element> apply(Generator<T, FunctionTypes::Element> gen, F f) {
-        co_yield(f(gen()));
+        co_yield f(gen());
     }
 
     template <typename T, typename F>
@@ -150,7 +164,7 @@ namespace detail {
         while (gen) {
             auto e = gen();
             if (f(e)) {
-                co_yield(e);
+                co_yield e;
                 co_return;
             }
         }
@@ -164,7 +178,14 @@ namespace detail {
             if (temp == std::nullopt)
                 co_return;
             else if (temp.value())
-                co_yield(e);
+                co_yield e;
+        }
+    }
+
+    template <typename T>
+    Generator<T, FunctionTypes::Sequence> take(Generator<T, FunctionTypes::Sequence> gen, auto n) {
+        for (auto i = 0; i < n; ++i) {
+            co_yield gen();
         }
     }
 
@@ -173,7 +194,7 @@ namespace detail {
         while (gen) {
             auto e = gen();
             f(e);
-            co_yield(e);
+            co_yield e;
         }
     }
 }

@@ -3,6 +3,7 @@
 #include <array>
 #include <vector>
 #include <unordered_set>
+#include <set>
 
 namespace R3 {
     struct X {};
@@ -247,7 +248,16 @@ struct Configuration {
     friend auto operator<=>(const Configuration& first, const Configuration& second) = default;
 };
 
-template <unsigned Len, unsigned Dim, unsigned CurLen = Len>
+// https://stackoverflow.com/questions/15843525/how-do-you-insert-the-value-in-a-sorted-vector
+template <typename T>
+typename std::vector<T>::iterator insert_sorted(std::vector<T>& vec, T const& item) {
+    return vec.insert(
+        std::upper_bound(vec.begin(), vec.end(), item),
+        item
+    );
+};
+
+template <unsigned Len, unsigned Dim, unsigned CurLen = Len, bool use_hashset, bool use_sorted_vector, bool use_treeset>
 auto generate_polycubes() {
     using C = Configuration<CurLen, Dim>;
     std::vector<C> res;
@@ -259,8 +269,8 @@ auto generate_polycubes() {
         res.push_back(val);
         return res;
     }
-    else {
-        auto prev = generate_polycubes<Len, Dim, CurLen - 1>();
+    else if constexpr (use_hashset) {
+        auto prev = generate_polycubes<Len, Dim, CurLen - 1, use_hashset, use_sorted_vector, use_treeset>();
         std::cout << "iterating through " << prev.size() << "\n";
         std::unordered_set<C, typename C::Hash> used;
         if constexpr (Dim == 2) {
@@ -278,13 +288,13 @@ auto generate_polycubes() {
                 for (const Coordinate<Dim>& n : neighboring_coordinates) {
                     bool hasNegative = false;
                     if constexpr (Dim == 2) {
-                        hasNegative =   n.data.at(0) == -1 ||
-                                        n.data.at(1) == -1;
+                        hasNegative = n.data.at(0) == -1 ||
+                            n.data.at(1) == -1;
                     }
                     else {
-                        hasNegative =   n.data.at(0) == -1 ||
-                                        n.data.at(1) == -1 ||
-                                        n.data.at(2) == -1;
+                        hasNegative = n.data.at(0) == -1 ||
+                            n.data.at(1) == -1 ||
+                            n.data.at(2) == -1;
                     }
                     if (hasNegative || !space.index(n)) {
                         if (!hasNegative)
@@ -298,31 +308,282 @@ auto generate_polycubes() {
                                 continue;
                         }
                         else {
+                            if (used.contains(new_configuration))
+                                continue;
+                            auto r3x = new_configuration.rotation3<R3::X>();
+                            if (used.contains(r3x))
+                                continue;
+                            auto r3y = new_configuration.rotation3<R3::Y>();
+                            if (used.contains(r3y))
+                                continue;
+                            auto r3xx = r3x.rotation3<R3::X>();
+                            if (used.contains(r3xx))
+                                continue;
+                            auto r3xy = r3x.rotation3<R3::Y>();
+                            if (used.contains(r3xy))
+                                continue;
+                            auto r3yx = r3y.rotation3<R3::X>();
+                            if (used.contains(r3yx))
+                                continue;
+                            auto r3yy = r3y.rotation3<R3::Y>();
+                            if (used.contains(r3yy))
+                                continue;
+                            auto r3xxx = r3xx.rotation3<R3::X>();
+                            if (used.contains(r3xxx))
+                                continue;
+                            auto r3xxy = r3xx.rotation3<R3::Y>();
+                            if (used.contains(r3xxy))
+                                continue;
+                            auto r3xyx = r3xy.rotation3<R3::X>();
+                            if (used.contains(r3xyx))
+                                continue;
+                            auto r3xyy = r3xy.rotation3<R3::Y>();
+                            if (used.contains(r3xyy))
+                                continue;
+                            auto r3yxx = r3yx.rotation3<R3::X>();
+                            if (used.contains(r3yxx))
+                                continue;
+                            if (used.contains(r3yy.rotation3<R3::X>()))
+                                continue;
+                            auto r3yyy = r3yy.rotation3<R3::Y>();
+                            if (used.contains(r3yyy))
+                                continue;
+                            auto r3xxxy = r3xxx.rotation3<R3::Y>();
+                            if (used.contains(r3xxxy))
+                                continue;
+                            if (used.contains(r3xxy.rotation3<R3::X>()))
+                                continue;
+                            if (used.contains(r3xxy.rotation3<R3::Y>()))
+                                continue;
+                            auto r3xyxx = r3xyx.rotation3<R3::X>();
+                            if (used.contains(r3xyxx))
+                                continue;
+                            auto r3xyyy = r3xyy.rotation3<R3::Y>();
+                            if (used.contains(r3xyyy))
+                                continue;
+                            if (used.contains(r3yxx.rotation3<R3::X>()))
+                                continue;
+                            if (used.contains(r3yyy.rotation3<R3::X>()))
+                                continue;
+                            if (used.contains(r3xxxy.rotation3<R3::X>()))
+                                continue;
+                            if (used.contains(r3xyxx.rotation3<R3::X>()))
+                                continue;
+                            if (used.contains(r3xyyy.rotation3<R3::X>()))
+                                continue;
+                        }
+                        used.insert(new_configuration);
+                        res.push_back(new_configuration);
+                    }
+                }
+            }
+        }
+        return res;
+    } else if constexpr (use_sorted_vector) {
+        auto prev = generate_polycubes<Len, Dim, CurLen - 1, use_hashset, use_sorted_vector, use_treeset>();
+        std::cout << "iterating through " << prev.size() << "\n";
+        if constexpr (Dim == 2) {
+            res.reserve(prev.size() * 4);
+        }
+        else {
+            res.reserve(prev.size() * 8);
+        }
+        for (const auto& configuration : prev) {
+            auto space = configuration.as_space<Len>();
+            for (const Coordinate<Dim>& c : configuration.data) {
+                auto neighboring_coordinates = c.neighboring_coordinates();
+                for (const Coordinate<Dim>& n : neighboring_coordinates) {
+                    bool hasNegative = false;
+                    if constexpr (Dim == 2) {
+                        hasNegative = n.data.at(0) == -1 ||
+                            n.data.at(1) == -1;
+                    }
+                    else {
+                        hasNegative = n.data.at(0) == -1 ||
+                            n.data.at(1) == -1 ||
+                            n.data.at(2) == -1;
+                    }
+                    if (hasNegative || !space.index(n)) {
+                        if (!hasNegative)
+                            space.insert(n);
+                        auto new_configuration = configuration.append(n);
+                        if constexpr (Dim == 2) {
+                            if (std::binary_search(res.begin(), res.end(), new_configuration) ||
+                                std::binary_search(res.begin(), res.end(), new_configuration.rotation<1>()) ||
+                                std::binary_search(res.begin(), res.end(), new_configuration.rotation<2>()) ||
+                                std::binary_search(res.begin(), res.end(), new_configuration.rotation<3>()))
+                                continue;
+                        }
+                        else {
+                            if (std::binary_search(res.begin(), res.end(), new_configuration))
+                                continue;
+                            auto r3x = new_configuration.rotation3<R3::X>();
+                            if (std::binary_search(res.begin(), res.end(), r3x))
+                                continue;
+                            auto r3y = new_configuration.rotation3<R3::Y>();
+                            if (std::binary_search(res.begin(), res.end(), r3y))
+                                continue;
+                            auto r3xx = r3x.rotation3<R3::X>();
+                            if (std::binary_search(res.begin(), res.end(), r3xx))
+                                continue;
+                            auto r3xy = r3x.rotation3<R3::Y>();
+                            if (std::binary_search(res.begin(), res.end(), r3xy))
+                                continue;
+                            auto r3yx = r3y.rotation3<R3::X>();
+                            if (std::binary_search(res.begin(), res.end(), r3yx))
+                                continue;
+                            auto r3yy = r3y.rotation3<R3::Y>();
+                            if (std::binary_search(res.begin(), res.end(), r3yy))
+                                continue;
+                            auto r3xxx = r3xx.rotation3<R3::X>();
+                            if (std::binary_search(res.begin(), res.end(), r3xxx))
+                                continue;
+                            auto r3xxy = r3xx.rotation3<R3::Y>();
+                            if (std::binary_search(res.begin(), res.end(), r3xxy))
+                                continue;
+                            auto r3xyx = r3xy.rotation3<R3::X>();
+                            if (std::binary_search(res.begin(), res.end(), r3xyx))
+                                continue;
+                            auto r3xyy = r3xy.rotation3<R3::Y>();
+                            if (std::binary_search(res.begin(), res.end(), r3xyy))
+                                continue;
+                            auto r3yxx = r3yx.rotation3<R3::X>();
+                            if (std::binary_search(res.begin(), res.end(), r3yxx))
+                                continue;
+                            if (std::binary_search(res.begin(), res.end(), r3yy.rotation3<R3::X>()))
+                                continue;
+                            auto r3yyy = r3yy.rotation3<R3::Y>();
+                            if (std::binary_search(res.begin(), res.end(), r3yyy))
+                                continue;
+                            auto r3xxxy = r3xxx.rotation3<R3::Y>();
+                            if (std::binary_search(res.begin(), res.end(), r3xxxy))
+                                continue;
+                            if (std::binary_search(res.begin(), res.end(), r3xxy.rotation3<R3::X>()))
+                                continue;
+                            if (std::binary_search(res.begin(), res.end(), r3xxy.rotation3<R3::Y>()))
+                                continue;
+                            auto r3xyxx = r3xyx.rotation3<R3::X>();
+                            if (std::binary_search(res.begin(), res.end(), r3xyxx))
+                                continue;
+                            auto r3xyyy = r3xyy.rotation3<R3::Y>();
+                            if (std::binary_search(res.begin(), res.end(), r3xyyy))
+                                continue;
+                            if (std::binary_search(res.begin(), res.end(), r3yxx.rotation3<R3::X>()))
+                                continue;
+                            if (std::binary_search(res.begin(), res.end(), r3yyy.rotation3<R3::X>()))
+                                continue;
+                            if (std::binary_search(res.begin(), res.end(), r3xxxy.rotation3<R3::X>()))
+                                continue;
+                            if (std::binary_search(res.begin(), res.end(), r3xyxx.rotation3<R3::X>()))
+                                continue;
+                            if (std::binary_search(res.begin(), res.end(), r3xyyy.rotation3<R3::X>()))
+                                continue;
+                        }
+                        insert_sorted(res, new_configuration);
+                    }
+                }
+            }
+        }
+        return res;
+    } else if constexpr (use_treeset) {
+        auto prev = generate_polycubes<Len, Dim, CurLen - 1, use_hashset, use_sorted_vector, use_treeset>();
+        std::cout << "iterating through " << prev.size() << "\n";
+        std::set<C> used;
+        if constexpr (Dim == 2) {
+            res.reserve(prev.size() * 4);
+        }
+        else {
+            res.reserve(prev.size() * 8);
+        }
+        for (const auto& configuration : prev) {
+            auto space = configuration.as_space<Len>();
+            for (const Coordinate<Dim>& c : configuration.data) {
+                auto neighboring_coordinates = c.neighboring_coordinates();
+                for (const Coordinate<Dim>& n : neighboring_coordinates) {
+                    bool hasNegative = false;
+                    if constexpr (Dim == 2) {
+                        hasNegative = n.data.at(0) == -1 ||
+                            n.data.at(1) == -1;
+                    }
+                    else {
+                        hasNegative = n.data.at(0) == -1 ||
+                            n.data.at(1) == -1 ||
+                            n.data.at(2) == -1;
+                    }
+                    if (hasNegative || !space.index(n)) {
+                        if (!hasNegative)
+                            space.insert(n);
+                        auto new_configuration = configuration.append(n);
+                        if constexpr (Dim == 2) {
                             if (used.contains(new_configuration) ||
-                                used.contains(new_configuration.rotation3<R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::Y>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::Y>()) ||
-                                used.contains(new_configuration.rotation3<R3::Y, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::Y, R3::Y>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::X, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::X, R3::Y>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::Y, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::Y, R3::Y>()) ||
-                                used.contains(new_configuration.rotation3<R3::Y, R3::X, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::Y, R3::Y, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::Y, R3::Y, R3::Y>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::X, R3::X, R3::Y>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::X, R3::Y, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::X, R3::Y, R3::Y>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::Y, R3::X, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::Y, R3::Y, R3::Y>()) ||
-                                used.contains(new_configuration.rotation3<R3::Y, R3::X, R3::X, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::Y, R3::Y, R3::Y, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::X, R3::X, R3::Y, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::Y, R3::X, R3::X, R3::X>()) ||
-                                used.contains(new_configuration.rotation3<R3::X, R3::Y, R3::Y, R3::Y, R3::X>())
-                                )
+                                used.contains(new_configuration.rotation<1>()) ||
+                                used.contains(new_configuration.rotation<2>()) ||
+                                used.contains(new_configuration.rotation<3>()))
+                                continue;
+                        }
+                        else {
+                            if (used.contains(new_configuration))
+                                continue;
+                            auto r3x = new_configuration.rotation3<R3::X>();
+                            if (used.contains(r3x))
+                                continue;
+                            auto r3y = new_configuration.rotation3<R3::Y>();
+                            if (used.contains(r3y))
+                                continue;
+                            auto r3xx = r3x.rotation3<R3::X>();
+                            if (used.contains(r3xx))
+                                continue;
+                            auto r3xy = r3x.rotation3<R3::Y>();
+                            if (used.contains(r3xy))
+                                continue;
+                            auto r3yx = r3y.rotation3<R3::X>();
+                            if (used.contains(r3yx))
+                                continue;
+                            auto r3yy = r3y.rotation3<R3::Y>();
+                            if (used.contains(r3yy))
+                                continue;
+                            auto r3xxx = r3xx.rotation3<R3::X>();
+                            if (used.contains(r3xxx))
+                                continue;
+                            auto r3xxy = r3xx.rotation3<R3::Y>();
+                            if (used.contains(r3xxy))
+                                continue;
+                            auto r3xyx = r3xy.rotation3<R3::X>();
+                            if (used.contains(r3xyx))
+                                continue;
+                            auto r3xyy = r3xy.rotation3<R3::Y>();
+                            if (used.contains(r3xyy))
+                                continue;
+                            auto r3yxx = r3yx.rotation3<R3::X>();
+                            if (used.contains(r3yxx))
+                                continue;
+                            if (used.contains(r3yy.rotation3<R3::X>()))
+                                continue;
+                            auto r3yyy = r3yy.rotation3<R3::Y>();
+                            if (used.contains(r3yyy))
+                                continue;
+                            auto r3xxxy = r3xxx.rotation3<R3::Y>();
+                            if (used.contains(r3xxxy))
+                                continue;
+                            if (used.contains(r3xxy.rotation3<R3::X>()))
+                                continue;
+                            if (used.contains(r3xxy.rotation3<R3::Y>()))
+                                continue;
+                            auto r3xyxx = r3xyx.rotation3<R3::X>();
+                            if (used.contains(r3xyxx))
+                                continue;
+                            auto r3xyyy = r3xyy.rotation3<R3::Y>();
+                            if (used.contains(r3xyyy))
+                                continue;
+                            if (used.contains(r3yxx.rotation3<R3::X>()))
+                                continue;
+                            if (used.contains(r3yyy.rotation3<R3::X>()))
+                                continue;
+                            if (used.contains(r3xxxy.rotation3<R3::X>()))
+                                continue;
+                            if (used.contains(r3xyxx.rotation3<R3::X>()))
+                                continue;
+                            if (used.contains(r3xyyy.rotation3<R3::X>()))
                                 continue;
                         }
                         used.insert(new_configuration);
@@ -336,20 +597,25 @@ auto generate_polycubes() {
 }
 
 unsigned main() {
-    constexpr unsigned depth2 = 16;
-    constexpr unsigned depth3 = 11;
+    constexpr unsigned depth2 = 12;
+    constexpr unsigned depth3 = 12;
+
+    constexpr bool use_hashset = true;
+    constexpr bool use_sorted_vector = false;
+    constexpr bool use_treeset = false;
+
     {
         auto t1 = std::chrono::steady_clock::now();
-        auto all_cubes = generate_polycubes<depth2, 2>();
+        auto all_cubes = generate_polycubes<depth2, 2, depth2, use_hashset, use_sorted_vector, use_treeset>();
         auto t2 = std::chrono::steady_clock::now();
-        // 16: 26152418 calculated in 197.564s (reached 9.8GB)
+        // 16: 26152418 calculated in 197.564s (hashset, reached 9.8GB)
         std::cout << depth2 << ": " << all_cubes.size() << " calculated in " << (t2 - t1).count() / 1000000000.0 << "s\n";
     }
     {
         auto t1 = std::chrono::steady_clock::now();
-        auto all_cubes = generate_polycubes<depth3, 3>();
+        auto all_cubes = generate_polycubes<depth3, 3, depth3, use_hashset, use_sorted_vector, use_treeset>();
         auto t2 = std::chrono::steady_clock::now();
-        // 11: 2522522 calculated in 60.6725s (reached 1GB)
+        // 12: 18598427 calculated in 311.796s (hashset, reached 8GB)
         std::cout << depth3 << ": " << all_cubes.size() << " calculated in " << (t2 - t1).count() / 1000000000.0 << "s\n";
     }
     return 0;

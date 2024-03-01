@@ -1,12 +1,7 @@
 #pragma once
 #include "detail.h"
 
-#define NonCopyableNonDefaultConstructible(T)\
-T() = delete;\
-T& operator=(const T&) = delete;\
-T(const T&) = delete;\
-T& operator=(T&&) = default;\
-T(T&&) = default;
+#define Forward(...) std::forward<decltype(__VA_ARGS__)>(__VA_ARGS__)
 
 template <typename Operation>
 concept FunctionalOperation = requires(Operation) {
@@ -18,6 +13,7 @@ struct map {
     F f;
 
     constexpr map(F&& f) : f(std::move(f)) {}
+
     NonCopyableNonDefaultConstructible(map);
 
     using InputType = FunctionTypes::Sequence;
@@ -40,8 +36,24 @@ struct filter {
 
     constexpr auto operator()(auto generator) & = delete;
 
-    constexpr auto operator()(auto generator) && {
+    constexpr auto operator()(auto generator)&& {
         return detail::filter(std::move(generator), std::move(f));
+    }
+};
+
+template <typename T>
+struct take {
+    T n;
+
+    constexpr take(T n) : n(n) {}
+    NonCopyableNonDefaultConstructible(take);
+
+    using InputType = FunctionTypes::Sequence;
+
+    constexpr auto operator()(auto generator) & = delete;
+
+    constexpr auto operator()(auto generator)&& {
+        return detail::take(std::move(generator), n);
     }
 };
 
@@ -172,16 +184,17 @@ struct foreach {
     }
 };
 
-auto g(auto generator, FunctionalOperation auto op, FunctionalOperation auto... operators) {
+auto g(auto&& generator, FunctionalOperation auto op, FunctionalOperation auto... operators) {
     if constexpr (sizeof...(operators) == 0)
-        return std::move(op)(detail::identity_gen<decltype(op)::InputType>(std::move(generator)));
+        return std::move(op)(detail::identity_gen<decltype(op)::InputType>(Forward(generator)));
     else
-        return g(std::move(op)(detail::identity_gen<decltype(op)::InputType>(std::move(generator))), std::forward<decltype(operators)>(operators)...);
+        return g(std::move(op)(detail::identity_gen<decltype(op)::InputType>(Forward(generator))), std::forward<decltype(operators)>(operators)...);
 }
 
-auto op(auto operand, FunctionalOperation auto... operators) {
+auto op(auto&& operand, FunctionalOperation auto&&... operators) {
     if constexpr (sizeof...(operators) == 0)
         return operand;
+        // same as: return detail::collect(detail::identity_element(std::move(operand)));
     else
-        return detail::collect(g(detail::identity_element(std::move(operand)), std::forward<decltype(operators)>(operators)...));
+        return detail::collect(g(detail::identity_element(Forward(operand)), std::forward<decltype(operators)>(operators)...));
 }

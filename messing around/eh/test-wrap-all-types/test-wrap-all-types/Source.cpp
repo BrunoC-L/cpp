@@ -3,6 +3,19 @@
 #include "use-cases.h"
 #include <vector>
 
+
+
+/*
+ * This project presents a way to pass parameters to functions without having
+ * to deal with the complexity of univeral references or accidentally copying
+ * or copy constructing instead of referencing
+ * 
+ * It is impossible to accidentally copy as it requires a call to a copy
+ * method on the reference types and each reference has a simple meaning
+ */
+
+
+
 struct SomeType {};
 
 auto function_taking_ref(Ref<SomeType> a) {}
@@ -10,6 +23,10 @@ auto function_taking_ref(Ref<SomeType> a) {}
 auto function_that_matches_either_c_or_t(ConstRef<SomeType> a) {}
 
 auto function_that_matches_either_c_or_t(Temporary<SomeType> a) {}
+
+// come back to read this after line 100
+template <template <typename> typename RefT> requires AnyReferenceTemplate<RefT>
+void h(RefT<SomeType> ref) {}
 
 void example() {
 	// Three Reference types exist in this system
@@ -73,6 +90,19 @@ void example() {
 	ref.copy();
 	cref.copy();
 	tref.copy();
+
+	// you can also use concepts to refer to reference types
+	auto f = [](AnyReference auto ref) {
+		// Ref, ConstRef or Temporary
+	};
+	auto g = [](NonTemporary auto ref) {
+		// Ref or ConstRef
+	};
+	// you can also refer to reference templates using concepts
+	// but I do not recommend it, see lines 27-29
+
+	f(ref);
+	f(cref);
 }
 
 int main() {
