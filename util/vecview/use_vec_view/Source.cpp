@@ -73,10 +73,6 @@ int main() {
 			std::cout << i << ", ";
 		}
 		std::cout << "\n";
-		for (const int& i : vecview::join(u, vecview::element(666), u2, vecview::element(777), std::vector<int>{8, 8, 8})) {
-			std::cout << i << ", ";
-		}
-		std::cout << "\n";
 		auto v = vecview::join(u, vecview::element(666), u2, vecview::element(777), std::vector<int>{8, 8, 8});
 		if (v.size() != u.size() + 1 + u2.size() + 1 + 3) {
 			abort();

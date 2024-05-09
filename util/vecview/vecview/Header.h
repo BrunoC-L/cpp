@@ -49,37 +49,6 @@ namespace vecview {
 		size_t size() const {
 			return 1;
 		}
-
-		bool is_moved = false;
-		static constexpr bool DEBUG_PRINTS = false;
-
-		element_value(T&& e) : e(std::move(e)) {
-			if constexpr (DEBUG_PRINTS) {
-				puts("create");
-				std::cout << (int)(this) << "\n";
-			}
-		}
-
-		element_value(const element_value& other) : e(e) {
-			throw;
-		}
-
-		element_value(element_value&& other) : e(std::move(other.e)) {
-			if constexpr (DEBUG_PRINTS) {
-				puts("move");
-				std::cout << (int)(this) << "\n";
-				other.is_moved = true;
-			}
-		}
-
-		~element_value() {
-			if constexpr (DEBUG_PRINTS) {
-				if (is_moved)
-					return;
-				puts("destroy");
-				std::cout << (int)(this) << "\n";
-			}
-		}
 	};
 
 	template <typename T>
@@ -310,11 +279,6 @@ namespace vecview {
 	mutable_view_tuple_end_sentinel<T, V, Vs...> end(const view_tuple<T, V, Vs...>& e) {
 		return {};
 	}
-
-	/*template <typename T>
-	view_tuple<T> join() {
-		return {};
-	}*/
 
 	template <typename T>
 	struct remove_rvalue;
